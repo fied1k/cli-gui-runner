@@ -150,8 +150,34 @@ When contributing or committing, format commit messages as:
    - Bumps the version in `pyproject.toml` and `cli_gui_runner.py`.
 4. When the release PR is merged, Release Please creates a Git tag (`vX.Y.Z`) and a GitHub Release.
 
+### Push & Synchronize (Local Folder + Remote Repo)
+
+To ensure that pushing your changes updates **both your local folder files** (`cli_gui_runner.py`, `pyproject.toml`, `CHANGELOG.md`) and the **remote GitHub repository** with the new version and changelog tags simultaneously:
+
+```powershell
+# In PowerShell:
+.\push.ps1 -Message "feat: add search filter to command list"
+
+# Or using the Git sync alias:
+git sync -m "feat: add search filter to command list"
+
+# Or directly with Python:
+python scripts/push.py -m "feat: add search filter to command list"
+```
+
+This automated push pipeline will:
+1. Fetch remote tags and pull any remote updates.
+2. Stage and commit your changes.
+3. Automatically determine the SemVer increment level (`patch`, `minor`, or `major`) from your commits.
+4. Update `__version__` in `cli_gui_runner.py` and `version` in `pyproject.toml`.
+5. Prepend the new release section to `CHANGELOG.md`.
+6. Commit the version bump and create the Git tag in your local repository.
+7. Push both the branch commits and release tags to GitHub.
+
+---
+
 ### Local Version Bumping Tool
-A zero-dependency helper script is included to bump versions and update the changelog locally:
+A zero-dependency helper script is also included if you only want to bump version files without pushing:
 
 ```bash
 # Auto-detect bump level from git commit history

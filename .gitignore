@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.py.1
+*.[0-9]
 *.py.bak
 *.bak
 

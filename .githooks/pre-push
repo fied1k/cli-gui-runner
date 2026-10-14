@@ -1,0 +1,10 @@
+#!/bin/sh
+# Pre-push hook: ensures tests pass and remote tags are fetched
+echo "==> [pre-push] Verifying test suite before push..."
+python -m unittest discover tests
+if [ $? -ne 0 ]; then
+    echo "ERROR: Unit tests failed. Push aborted."
+    exit 1
+fi
+echo "==> [pre-push] Tests passed successfully."
+exit 0

@@ -1,9 +1,3 @@
-"""CLI Quick-Reference GUI Runner
-
-A graphical user interface for launching parameterized commands, running cheat-sheet
-scripts, and monitoring terminal output in real-time.
-"""
-
 import os
 import re
 import subprocess
@@ -11,8 +5,6 @@ import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tkinter.scrolledtext import ScrolledText
-
-__version__ = "0.1.0"
 
 DEFAULT_COMMANDS_FILE = "commands.txt"
 PASTE_COMMANDS_PATH = "PasteCommands.txt"
@@ -28,25 +20,22 @@ Custom cURL Request | curl -I -X <HTTP_Method> <URL> | Fetch HTTP headers from a
 """
 
 SAMPLE_PASTE_FILE = """# === PASTE RAW COMMANDS BELOW ===
-# Supported raw formats that will be auto-formatted into commands.txt:
-# 1. Comment line directly above a command:
-#    # Traceroute to a host
-#    traceroute <Target_Host>
-#
-# 2. Inline comments:
-#    whois <Domain_Name> # Lookup domain registration info
-#
-# 3. Colon or Dash labeled lines:
-#    DNS Lookup - nslookup <Domain_Name>
-#
-# 4. Raw commands (with <var>, {var}, or [var] placeholders):
-#    $ ssh [Username]@<Server_IP> -p {Port}
+# Hardcoded IPs, URLs, Subnets, Ports, Domains, and File Paths will be
+# automatically converted into <Variable> placeholders when imported!
 
-# Traceroute to Host
-traceroute <Target_Host>
+# Fast Service Scan
+nmap -sV -p 22,80,443 192.168.1.105
 
-whois <Domain_Name> # Lookup domain registration info
-$ ssh [Username]@<Server_IP> -p {Port}
+# Ping Sweep Subnet
+nmap -sn 10.10.14.0/24
+
+# Directory Brute Force
+gobuster dir -u https://target-site.com/app -w /usr/share/wordlists/common.txt
+
+# Remote SSH Login
+$ ssh root@192.168.1.25 -p 2222
+
+whois example.org # Check domain registration
 """
 
 
@@ -54,9 +43,10 @@ class CommandRunnerGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("CLI Quick-Reference GUI Runner")
-        self.root.geometry("920x620")
+        self.root.geometry("980x640")
         self.current_process = None
         self.current_file = DEFAULT_COMMANDS_FILE
+        self.auto_param_var = tk.BooleanVar(value=True)
 
         self._ensure_default_files()
         self._build_ui()
@@ -76,13 +66,19 @@ class CommandRunnerGUI:
         toolbar = ttk.Frame(self.root, padding=8)
         toolbar.pack(fill=tk.X)
 
-        ttk.Button(toolbar, text="Open Cheat Sheet...", command=self.browse_file).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(toolbar, text="Reload File", command=lambda: self.load_commands(self.current_file)).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="Import PasteCommands.txt", command=self.import_paste_commands).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="Quick Paste Editor...", command=self.open_paste_editor).pack(side=tk.LEFT, padx=5)
+        ttk.Button(toolbar, text="Open Cheat Sheet...", command=self.browse_file).pack(side=tk.LEFT, padx=(0, 4))
+        ttk.Button(toolbar, text="Reload File", command=lambda: self.load_commands(self.current_file)).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Import PasteCommands.txt", command=self.import_paste_commands).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Quick Paste Editor...", command=self.open_paste_editor).pack(side=tk.LEFT, padx=4)
+
+        ttk.Checkbutton(
+            toolbar,
+            text="Auto-detect <Variables>",
+            variable=self.auto_param_var
+        ).pack(side=tk.LEFT, padx=8)
 
         self.file_label = ttk.Label(toolbar, text=f"Loaded: {self.current_file}", foreground="gray")
-        self.file_label.pack(side=tk.LEFT, padx=10)
+        self.file_label.pack(side=tk.LEFT, padx=6)
 
         self.stop_btn = ttk.Button(toolbar, text="Stop Running Command", command=self.stop_process, state=tk.DISABLED)
         self.stop_btn.pack(side=tk.RIGHT)
@@ -120,17 +116,114 @@ class CommandRunnerGUI:
         self.output_area.pack(fill=tk.BOTH, expand=True)
 
     # -------------------------------------------------------------------------
-    # Parsing & Import Pipelines
+    # Smart Hardcoded Value -> <Variable> Auto-Parameterizer
     # -------------------------------------------------------------------------
+    def _auto_parameterize_command(self, cmd):
+        """
+        Scans a raw CLI command and replaces hardcoded URLs, IPs, subnets,
+        ports, MAC addresses, user@host strings, file paths, and domains
+        with <Variable> placeholders while keeping the base command intact.
+        """
+        tokens = cmd.split()
+        if len(tokens) <= 1:
+            return cmd
+
+        # Keep the first token (the executable itself, e.g. /usr/bin/nmap) untouched
+        executable = tokens[0]
+        args_str = cmd[len(executable):]
+
+        # Temporarily shield existing <var> or {var} placeholders so regexes don't alter them
+        shielded = {}
+        def _shield_match(match):
+            key = f"__VAR_SHIELD_{len(shielded)}__"
+            shielded[key] = match.group(0)
+            return key
+
+        args_str = re.sub(r"[<\{][^>\}\s]+[>\}]", _shield_match, args_str)
+
+        # 1. URLs (http:// or https://) -> <URL>
+        args_str = re.sub(r"https?://[^\s\"'>]+", "<URL>", args_str)
+
+        # 2. user@host or user@IP -> <Username>@<Target_Host>
+        args_str = re.sub(
+            r"\b[a-zA-Z0-9._-]+@(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b",
+            "<Username>@<Target_Host>",
+            args_str
+        )
+
+        # 3. IPv4 Subnet CIDR (e.g., 192.168.1.0/24) -> <Subnet_CIDR>
+        args_str = re.sub(
+            r"\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b",
+            "<Subnet_CIDR>",
+            args_str
+        )
+
+        # 4. IPv4 with Port (e.g., 10.0.0.1:8080) -> <Target_IP>:<Port>
+        args_str = re.sub(
+            r"\b(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}\b",
+            "<Target_IP>:<Port>",
+            args_str
+        )
+
+        # 5. Plain IPv4 Address (e.g., 192.168.1.1) -> <Target_IP>
+        args_str = re.sub(
+            r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+            "<Target_IP>",
+            args_str
+        )
+
+        # 6. MAC Address (e.g., 00:1A:2B:3C:4D:5E) -> <MAC_Address>
+        args_str = re.sub(
+            r"\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b",
+            "<MAC_Address>",
+            args_str
+        )
+
+        # 7. Explicit Port Flags (e.g., -p 80,443 or --port 8080) -> -p <Port>
+        args_str = re.sub(
+            r"(\s(?:-p|--port)\s+)(?:\d+(?:[,-]\d+)*)\b",
+            r"\1<Port>",
+            args_str
+        )
+
+        # 8. Unix or Windows File Paths in arguments -> <File_Path>
+        args_str = re.sub(
+            r"(?<=\s)(?:[a-zA-Z]:\\[^\s\"']+|\.{0,2}/[a-zA-Z0-9._/-]+)",
+            "<File_Path>",
+            args_str
+        )
+
+        # 9. Standalone Domain Names -> <Domain_Name>
+        args_str = re.sub(
+            r"\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|mil|io|co|local|lan|internal|info|biz|me|us|uk|ca|de|fr|au|jp)\b",
+            "<Domain_Name>",
+            args_str,
+            flags=re.IGNORECASE
+        )
+
+        # Restore previously shielded <var> or {var} placeholders
+        for key, original_val in shielded.items():
+            args_str = args_str.replace(key, original_val)
+
+        return executable + args_str
+
     def _normalize_command_string(self, cmd):
-        """Strips shell prompts and converts [var] placeholders to <var>."""
+        """Strips shell prompts, normalizes [var] to <var>, and optionally auto-parameterizes."""
         cmd = re.sub(r"^[\$>]\s+", "", cmd.strip())
         cmd = re.sub(r"\[([A-Za-z0-9_\-]+)\]", r"<\1>", cmd)
+        auto_param = False
+        if hasattr(self, "auto_param_var") and self.auto_param_var is not None:
+            try:
+                auto_param = bool(self.auto_param_var.get())
+            except Exception:
+                auto_param = False
+        if auto_param:
+            cmd = self._auto_parameterize_command(cmd)
         return cmd.strip()
 
     def _generate_label_from_command(self, cmd, desc=""):
         """Creates a clean, readable button title if none was explicitly provided."""
-        if desc and len(desc) <= 28 and desc != cmd:
+        if desc and len(desc) <= 28 and not desc.startswith("Execute:"):
             return desc
 
         tokens = cmd.split()
@@ -141,7 +234,7 @@ class CommandRunnerGUI:
         flags = [t for t in tokens[1:] if t.startswith("-") and len(t) <= 6]
         if flags:
             label = f"{base_tool} ({' '.join(flags[:2])})"
-        elif len(tokens) > 1 and not tokens[1].startswith("<") and not tokens[1].startswith("{"):
+        elif len(tokens) > 1 and not tokens[1].startswith(("<", "{")):
             label = f"{base_tool} {tokens[1]}"
         else:
             label = base_tool
@@ -150,9 +243,8 @@ class CommandRunnerGUI:
 
     def format_raw_paste_text(self, raw_text):
         """
-        Parses unstructured command lines from PasteCommands.txt or clipboard
-        and returns a list of formatted tuples: (label, cmd_template, description).
-        Supports TSV, Pipe-delimited, Colon/Hyphen, and raw commands.
+        Parses unstructured command lines from PasteCommands.txt and returns a list
+        of formatted tuples: (label, cmd_template, description).
         """
         formatted_entries = []
         pending_comment = ""
@@ -163,23 +255,14 @@ class CommandRunnerGUI:
                 pending_comment = ""
                 continue
 
-            # Ignore template header comments, but capture single descriptive comments
+            # Ignore header instruction comments, capture single descriptive comments
             if line.startswith("#"):
                 comment_body = line.lstrip("#").strip()
                 if (
                     not comment_body
                     or comment_body.startswith("===")
-                    or comment_body.lower().startswith("supported raw formats")
-                    or comment_body.startswith("1.")
-                    or comment_body.startswith("2.")
-                    or comment_body.startswith("3.")
-                    or comment_body.startswith("4.")
-                    or comment_body in (
-                        "Traceroute to Host",
-                        "traceroute <Target_Host>",
-                        "whois <Domain_Name> # Lookup domain registration info",
-                        "$ ssh [Username]@<Server_IP> -p {Port}"
-                    )
+                    or "automatically converted into" in comment_body
+                    or "Hardcoded IPs, URLs" in comment_body
                 ):
                     pending_comment = ""
                 else:
@@ -188,9 +271,8 @@ class CommandRunnerGUI:
 
             # Case 1: Tab-separated (TSV) like Action\tCommand\tDescription
             if "\t" in line:
-                parts = [p.strip() for p in line.split("\t") if p.strip()]
+                parts = [p.strip() for p in raw_line.split("\t") if p.strip()]
                 if len(parts) >= 2:
-                    # Ignore table header if present
                     if parts[0].lower() in ("action", "label", "button", "name", "title") and "command" in parts[1].lower():
                         continue
                     label = parts[0]
@@ -211,24 +293,26 @@ class CommandRunnerGUI:
             desc = pending_comment
             pending_comment = ""
 
-            # Case 3: Inline trailing comment (e.g., "nmap -sV <IP> # Version scan")
+            # Case 2: Inline trailing comment (e.g., "whois example.org # Check domain")
             if " #" in line:
                 cmd_part, inline_comment = line.split(" #", 1)
                 line = cmd_part.strip()
                 if not desc:
                     desc = inline_comment.strip()
 
-            # Case 4: "Label : Command" or "Label - Command"
+            # Case 3: "Label : Command" or "Label - Command"
             label = ""
             match_sep = re.match(r"^([A-Za-z0-9\s\(\)_\-]{3,30}?)\s+(?::|-)\s+([a-zA-Z0-9\./~].*)$", line)
             if match_sep and not line.startswith(("http://", "https://")):
                 label = match_sep.group(1).strip()
-                cmd_template = self._normalize_command_string(match_sep.group(2))
+                raw_cmd = match_sep.group(2).strip()
             else:
-                cmd_template = self._normalize_command_string(line)
+                raw_cmd = line
+
+            cmd_template = self._normalize_command_string(raw_cmd)
 
             if not desc:
-                desc = f"Execute: {cmd_template}"
+                desc = f"Template: {cmd_template}"
 
             if not label:
                 label = self._generate_label_from_command(cmd_template, desc)
@@ -255,83 +339,119 @@ class CommandRunnerGUI:
                 return f.read()
 
     def import_paste_commands(self):
-        """Parses PasteCommands.txt, formats entries, appends to commands.txt, and reloads UI."""
+        """Parses PasteCommands.txt, converts hardcoded values to <Vars>, appends to commands.txt, and reloads."""
         raw_text = self._read_paste_sources(PASTE_COMMANDS_PATH)
         if not raw_text.strip():
-            messagebox.showinfo("Import", f"'{PASTE_COMMANDS_PATH}' is empty or does not exist.")
+            messagebox.showinfo("Import PasteCommands", f"No data found in '{PASTE_COMMANDS_PATH}'.")
             return
 
-        formatted = self.format_raw_paste_text(raw_text)
-        if not formatted:
-            messagebox.showwarning("Import", "No valid commands could be extracted.")
-            return
-
-        target_file = self.current_file if self.current_file else DEFAULT_COMMANDS_FILE
-        try:
-            with open(target_file, "a", encoding="utf-8") as f:
-                f.write(f"\n# --- Imported from {os.path.basename(PASTE_COMMANDS_PATH)} ---\n")
-                for label, cmd, desc in formatted:
-                    f.write(f"{label} | {cmd} | {desc}\n")
-
+        new_entries = self.format_raw_paste_text(raw_text)
+        if not new_entries:
             messagebox.showinfo(
-                "Import Successful",
-                f"Successfully parsed and appended {len(formatted)} command(s) to '{os.path.basename(target_file)}'."
+                "No Commands Detected",
+                f"No new commands were found in '{PASTE_COMMANDS_PATH}'.\n\n"
+                "Paste your raw CLI commands into PasteCommands.txt and try again."
             )
-            self.load_commands(target_file)
-        except Exception as e:
-            messagebox.showerror("Import Error", f"Failed to save imported commands: {e}")
+            return
+
+        existing_commands = set()
+        if os.path.exists(self.current_file):
+            with open(self.current_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        _, existing_cmd, _ = self.parse_line(line)
+                        existing_commands.add(existing_cmd.lower())
+
+        lines_to_append = []
+        skipped_duplicates = 0
+
+        for label, cmd_template, desc in new_entries:
+            if cmd_template.lower() in existing_commands:
+                skipped_duplicates += 1
+                continue
+            existing_commands.add(cmd_template.lower())
+            lines_to_append.append(f"{label} | {cmd_template} | {desc}")
+
+        if not lines_to_append:
+            messagebox.showinfo(
+                "Already Imported",
+                f"All {skipped_duplicates} command template(s) in '{PASTE_COMMANDS_PATH}' already exist in '{self.current_file}'."
+            )
+            return
+
+        with open(self.current_file, "a", encoding="utf-8") as f:
+            f.write("\n" + "\n".join(lines_to_append) + "\n")
+
+        self.load_commands(self.current_file)
+
+        if os.path.isfile(PASTE_COMMANDS_PATH):
+            clear_it = messagebox.askyesno(
+                "Import Complete",
+                f"Formatted and appended {len(lines_to_append)} command(s) to '{self.current_file}'"
+                f" ({skipped_duplicates} duplicate(s) skipped).\n\n"
+                f"Clear '{PASTE_COMMANDS_PATH}' for your next batch?"
+            )
+            if clear_it:
+                with open(PASTE_COMMANDS_PATH, "w", encoding="utf-8") as f:
+                    f.write("# === PASTE RAW COMMANDS BELOW ===\n\n")
 
     def open_paste_editor(self):
-        """Opens a quick text editor window to paste or edit commands directly."""
+        """In-app editor for PasteCommands.txt with live preview of auto-detected <Variables>."""
         editor = tk.Toplevel(self.root)
-        editor.title("Quick Paste Editor (PasteCommands.txt)")
-        editor.geometry("700x500")
+        editor.title(f"Edit & Import {PASTE_COMMANDS_PATH}")
+        editor.geometry("720x520")
         editor.transient(self.root)
+        editor.grab_set()
 
-        top_info = ttk.Label(
+        ttk.Label(
             editor,
-            text="Paste raw cheat sheets, TSV tables, or command lists below.\n"
-                 "Formats supported: TSV, 'Label | Command | Desc', '# Comment \\n cmd', 'cmd # note', etc.",
-            padding=8,
-            justify=tk.LEFT
-        )
-        top_info.pack(fill=tk.X)
+            text="Paste raw CLI commands below. Hardcoded IPs, URLs, Ports, Paths, and Domains will be turned into <Variables>:",
+            wraplength=690
+        ).pack(anchor="w", padx=10, pady=(10, 5))
 
-        text_box = ScrolledText(editor, wrap=tk.WORD, font=("Consolas", 10), height=18)
-        text_box.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+        text_box = ScrolledText(editor, font=("Consolas", 10), height=14)
+        text_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        current_content = self._read_paste_sources(PASTE_COMMANDS_PATH)
-        if current_content:
-            text_box.insert("1.0", current_content)
+        ttk.Label(editor, text="Preview of Formatted Output for commands.txt:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=10, pady=(5, 2))
+        preview_box = ScrolledText(editor, font=("Consolas", 9), height=7, bg="#f4f6f8", fg="#004578")
+        preview_box.pack(fill=tk.BOTH, expand=False, padx=10, pady=4)
+
+        if os.path.isfile(PASTE_COMMANDS_PATH):
+            with open(PASTE_COMMANDS_PATH, "r", encoding="utf-8", errors="ignore") as f:
+                text_box.insert(tk.END, f.read())
+
+        def refresh_preview(event=None):
+            raw = text_box.get("1.0", tk.END)
+            entries = self.format_raw_paste_text(raw)
+            preview_box.delete("1.0", tk.END)
+            for lbl, cmd, dsc in entries:
+                preview_box.insert(tk.END, f"{lbl} | {cmd} | {dsc}\n")
+
+        text_box.bind("<KeyRelease>", refresh_preview)
+        refresh_preview()
 
         def save_and_import():
-            new_text = text_box.get("1.0", tk.END).strip()
-            if not new_text:
-                messagebox.showwarning("Warning", "Editor is empty.", parent=editor)
-                return
-            try:
-                with open(PASTE_COMMANDS_PATH, "w", encoding="utf-8") as f:
-                    f.write(new_text + "\n")
-                editor.destroy()
-                self.import_paste_commands()
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save file: {e}", parent=editor)
+            content = text_box.get("1.0", tk.END)
+            with open(PASTE_COMMANDS_PATH, "w", encoding="utf-8") as f:
+                f.write(content)
+            editor.destroy()
+            self.import_paste_commands()
 
-        def save_only():
-            new_text = text_box.get("1.0", tk.END).strip()
-            try:
-                with open(PASTE_COMMANDS_PATH, "w", encoding="utf-8") as f:
-                    f.write(new_text + "\n")
-                messagebox.showinfo("Saved", f"Saved changes to {PASTE_COMMANDS_PATH}.", parent=editor)
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save file: {e}", parent=editor)
-
-        btn_bar = ttk.Frame(editor, padding=8)
+        btn_bar = ttk.Frame(editor, padding=10)
         btn_bar.pack(fill=tk.X)
-        ttk.Button(btn_bar, text="Format & Import into Cheat Sheet", command=save_and_import).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_bar, text="Save File", command=save_only).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_bar, text="Cancel", command=editor.destroy).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(
+            btn_bar,
+            text="Auto-convert hardcoded values to <Variables>",
+            variable=self.auto_param_var,
+            command=refresh_preview
+        ).pack(side=tk.LEFT)
+        ttk.Button(btn_bar, text="Save & Append to commands.txt", command=save_and_import).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_bar, text="Cancel", command=editor.destroy).pack(side=tk.RIGHT)
 
+    # -------------------------------------------------------------------------
+    # Existing File Loading & Command Execution Logic
+    # -------------------------------------------------------------------------
     def browse_file(self):
         filepath = filedialog.askopenfilename(
             title="Select Command Reference File",
@@ -385,7 +505,7 @@ class CommandRunnerGUI:
             )
             btn.pack(fill=tk.X, pady=(0, 3))
 
-            desc_lbl = ttk.Label(card, text=desc, font=("Segoe UI", 8), foreground="#555555", wraplength=230)
+            desc_lbl = ttk.Label(card, text=desc, font=("Segoe UI", 8), foreground="#555555", wraplength=250)
             desc_lbl.pack(anchor="w")
 
             col += 1
@@ -397,24 +517,21 @@ class CommandRunnerGUI:
             self.button_frame.columnconfigure(c, weight=1)
 
     def on_command_click(self, label, cmd_template):
-        # Extract variables inside <var> or {var}
         variables = list(dict.fromkeys(re.findall(r"[<\{]([^>\}\s]+)[>\}]", cmd_template)))
 
         if not variables:
-            # Direct execution with confirmation
             if messagebox.askyesno("Execute Command", f"Run command immediately?\n\n{cmd_template}"):
                 self.execute_command(cmd_template)
             return
 
-        # Modal dialog prompting for each detected variable
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Configure: {label}")
-        dialog.geometry("450x320")
+        dialog.geometry("460x340")
         dialog.transient(self.root)
         dialog.grab_set()
 
         ttk.Label(dialog, text="Template:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
-        ttk.Label(dialog, text=cmd_template, font=("Consolas", 9), foreground="#005fb8", wraplength=420).pack(anchor="w", padx=12, pady=(0, 10))
+        ttk.Label(dialog, text=cmd_template, font=("Consolas", 9), foreground="#005fb8", wraplength=430).pack(anchor="w", padx=12, pady=(0, 10))
 
         form_frame = ttk.Frame(dialog, padding=12)
         form_frame.pack(fill=tk.BOTH, expand=True)
@@ -438,9 +555,7 @@ class CommandRunnerGUI:
                 if not val:
                     messagebox.showwarning("Missing Input", f"Please provide a value for '{var_name}'.", parent=dialog)
                     return
-                # Replace both <var> and {var} occurrences
-                var_pattern = r"[<{]" + re.escape(var_name) + r"[>}]"
-                final_cmd = re.sub(var_pattern, val, final_cmd)
+                final_cmd = re.sub(rf"[<{{]{re.escape(var_name)}[>}}]", val, final_cmd)
 
             dialog.destroy()
             self.execute_command(final_cmd)
@@ -493,11 +608,7 @@ class CommandRunnerGUI:
             self.log_output("\n[Process terminated by user]\n")
 
 
-def main():
+if __name__ == "__main__":
     root = tk.Tk()
     app = CommandRunnerGUI(root)
     root.mainloop()
-
-
-if __name__ == "__main__":
-    main()

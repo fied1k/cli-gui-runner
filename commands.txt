@@ -6,3 +6,11 @@ Port Scan (Nmap) | nmap -sV -p <Port_Range> <Target_IP> | Scan specific ports an
 Find Files by Name | find <Directory> -name "*<Search_Term>*" | Search for files recursively
 Check Disk Space | df -h | Show current disk usage (No variables required)
 Custom cURL Request | curl -I -X <HTTP_Method> <URL> | Fetch HTTP headers from a URL
+
+# --- Network Diagnostics (TShark) ---
+List Interfaces | tshark -D | Shows all available network interfaces with their index numbers.
+Live Capture | tshark -i <interface> | Captures and streams live traffic to stdout from a specified interface.
+Limit Packets | tshark -i <interface> -c <packet_count> | Automatically stops the capture after receiving a specific number of packets.
+Write to File | tshark -i <interface> -w <output_file> | Saves raw packet data directly to a file for later analysis.
+Read from File | tshark -r <input_file> | Reads and analyzes an existing packet capture file.
+Display Filter | tshark -r <input_file> -Y "<filter>" | Filters the output using standard Wireshark display filter syntax.
