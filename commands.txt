@@ -1,0 +1,8 @@
+# Format: Button Name | Command Template | Description (Optional)
+# Or simply paste raw commands with <variable> or {variable} placeholders!
+
+Ping Host | ping -c 4 <IP_or_Hostname> | Send 4 ICMP echo requests to a target
+Port Scan (Nmap) | nmap -sV -p <Port_Range> <Target_IP> | Scan specific ports and detect versions
+Find Files by Name | find <Directory> -name "*<Search_Term>*" | Search for files recursively
+Check Disk Space | df -h | Show current disk usage (No variables required)
+Custom cURL Request | curl -I -X <HTTP_Method> <URL> | Fetch HTTP headers from a URL
