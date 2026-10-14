@@ -1,67 +1,99 @@
-# Scraped from https://offensiveramen.com/cheatsheets/nmap
-Basic scan (top 1000 ports) | nmap <target> | Basic scan (top 1000 ports)
-Ping scan (host discovery only) | nmap -sn <target> | Ping scan (host discovery only)
-BASIC SCANS# | nmap -Pn <target> | Skip host discovery, treat as online
-Scan all 65535 ports | nmap -p- <target> | Scan all 65535 ports
-Scan specific ports | nmap -p <Port> <target> | Scan specific ports
-SCAN TYPES# | nmap -sS <target> | SYN scan (stealth, default with root)
-SCAN TYPES# | nmap -sT <target> | TCP connect scan (no root needed)
-UDP scan | nmap -sU <target> | UDP scan
-ACK scan (firewall detection) | nmap -sA <target> | ACK scan (firewall detection)
-Window scan | nmap -sW <target> | Window scan
-FIN scan | nmap -sF <target> | FIN scan
-Xmas scan | nmap -sX <target> | Xmas scan
-Service version detection | nmap -sV <target> | Service version detection
-SERVICE & VERSION DETECTION# | nmap -sV --version-intensity 5 | More aggressive version detection
-Try all probes | nmap -sV --version-all <target> | Try all probes
-OS detection | nmap -O <target> | OS detection
-SERVICE & VERSION DETECTION# | nmap -A <target> | Aggressive (OS, version, script, traceroute)
-Paranoid (IDS evasion) | nmap -T0 <target> | Paranoid (IDS evasion)
-Sneaky | nmap -T1 <target> | Sneaky
-Polite | nmap -T2 <target> | Polite
-Normal (default) | nmap -T3 <target> | Normal (default)
-Aggressive | nmap -T4 <target> | Aggressive
-Insane | nmap -T5 <target> | Insane
-Limit retries | nmap --max-retries 1 <target> | Limit retries
-Send at least 1000 packets/sec | nmap --min-rate 1000 <target> | Send at least 1000 packets/sec
-Run specific script | nmap --script=<script> <target> | Run specific script
-Run default scripts | nmap --script=default <target> | Run default scripts
-Run vulnerability scripts | nmap --script=vuln <target> | Run vulnerability scripts
-Run safe scripts | nmap --script=safe <target> | Run safe scripts
-Authentication scripts | nmap --script=auth <target> | Authentication scripts
-Discovery scripts | nmap --script=discovery <target> | Discovery scripts
-Pass args to scripts | nmap --script-args=<args> | Pass args to scripts
-Enumerate web directories | nmap --script=http-enum <target> | Enumerate web directories
-SMB vulnerability check | nmap --script=smb-vuln* <target> | SMB vulnerability check
-Heartbleed check | nmap --script=ssl-heartbleed <target> | Heartbleed check
-DNS brute force | nmap --script=dns-brute <target> | DNS brute force
-Anonymous FTP check | nmap --script=ftp-anon <target> | Anonymous FTP check
-SSH brute force | nmap --script=ssh-brute <target> | SSH brute force
-Normal output | nmap -oN output.txt <target> | Normal output
-XML output | nmap -oX output.xml <target> | XML output
-Grepable output | nmap -oG output.gnmap <target> | Grepable output
-All formats | nmap -oA output <target> | All formats
-Verbose | nmap -v <target> | Verbose
-Very verbose | nmap -vv <target> | Very verbose
-Fragment packets | nmap -f <target> | Fragment packets
-Set MTU | nmap --mtu 24 <target> | Set MTU
-Decoy scan with random IPs | nmap -D RND:5 <target> | Decoy scan with random IPs
-Decoy scan with specific IPs | nmap -D decoy1,decoy2 <target> | Decoy scan with specific IPs
-Spoof source IP | nmap -S <spoofed-ip> <target> | Spoof source IP
-Use source port 53 | nmap -g 53 <target> | Use source port 53
-Append random data | nmap --data-length 25 <target> | Append random data
-Single host | nmap <Target_IP> | Single host
-Multiple hosts | nmap <Target_IP> <Target_IP> | Multiple hosts
-Range | nmap <Target_IP>-254 | Range
-CIDR notation | nmap <Subnet_CIDR> | CIDR notation
-From file | nmap -iL targets.txt | From file
-Exclude host | nmap --exclude <Target_IP> | Exclude host
-Exclude from file | nmap --excludefile exclude.txt | Exclude from file
-Quick scan of common ports | nmap -F -T4 <target> | Quick scan of common ports
-Full TCP scan with versions | nmap -sV -sC -p- <target> | Full TCP scan with versions
-Comprehensive scan | nmap -sS -sV -sC -O -p- -T4 <target> | Comprehensive scan
-Stealth scan | nmap -sS -Pn -T2 -f <target> | Stealth scan
-UDP top ports | nmap -sU --top-ports 100 <target> | UDP top ports
-Vulnerability assessment | nmap -sV --script=vuln <target> | Vulnerability assessment
-Extract open ports | grep "open" output.gnmap | cut -d" " -f2 | Extract open ports
-GREP EXAMPLES# | grep "80/open" output.gnmap | cut -d" " -f2 | Extract IPs with specific port open
+# Scraped from https://www.stationx.net/nmap-cheat-sheet/
+-sn | nmap -sn <Subnet_CIDR> | -sn
+-F | nmap -F <Target_IP> | -F
+-sV -sC | nmap -sV -sC <Target_IP> | -sV -sC
+-iL | nmap -iL targets.txt | -iL
+-iR | nmap -iR 100 | -iR
+-exclude | nmap -exclude <Target_IP> | -exclude
+-sS | nmap <Target_IP> -sS | -sS
+-sT | nmap <Target_IP> -sT | -sT
+-sU | nmap <Target_IP> -sU | -sU
+-sA | nmap <Target_IP> -sA | -sA
+-sW | nmap <Target_IP> -sW | -sW
+-sM | nmap <Target_IP> -sM | -sM
+-sL | nmap <Target_IP>-3 -sL | -sL
+-sn | nmap <Subnet_CIDR> -sn | -sn
+-Pn | nmap <Target_IP>-5 -Pn | -Pn
+-PS | nmap <Target_IP>-5 -PS22-25,80 | -PS
+-PA | nmap <Target_IP>-5 -PA22-25,80 | -PA
+-PU | nmap <Target_IP>-5 -PU53 | -PU
+-PR | nmap <Target_IP>-1/24 -PR | -PR
+-n | nmap <Target_IP> -n | -n
+-p | nmap <Target_IP> -p <Port> | -p
+-p | nmap <Target_IP> -p U:53,T:21-25,80 | -p
+-p | nmap <Target_IP> -p- | -p
+-p | nmap <Target_IP> -p http,https | -p
+-F | nmap <Target_IP> -F | -F
+-top-ports | nmap <Target_IP> -top-ports 2000 | -top-ports
+-p-65535 | nmap <Target_IP> -p-65535 | -p-65535
+-p0- | nmap <Target_IP> -p0- | -p0-
+-sV | nmap <Target_IP> -sV | -sV
+-sV -version-intensity | nmap <Target_IP> -sV -version-intensity 8 | -sV -version-intensity
+-sV -version-light | nmap <Target_IP> -sV -version-light | -sV -version-light
+-sV -version-all | nmap <Target_IP> -sV -version-all | -sV -version-all
+-A | nmap <Target_IP> -A | -A
+-O | nmap <Target_IP> -O | -O
+-O -osscan-limit | nmap <Target_IP> -O -osscan-limit | -O -osscan-limit
+-O -osscan-guess | nmap <Target_IP> -O -osscan-guess | -O -osscan-guess
+-O -max-os-tries | nmap <Target_IP> -O -max-os-tries 1 | -O -max-os-tries
+-T0 | nmap <Target_IP> -T0 | -T0
+-T1 | nmap <Target_IP> -T1 | -T1
+-T2 | nmap <Target_IP> -T2 | -T2
+-T3 | nmap <Target_IP> -T3 | -T3
+-T4 | nmap <Target_IP> -T4 | -T4
+-T5 | nmap <Target_IP> -T5 | -T5
+1s; 4m; 2h | -min-rtt-timeout/max-rtt-timeout/initial-rtt-timeout <time> | 1s; 4m; 2h
+50; 1024 | -min-hostgroup/max-hostgroup <size<size> | 50; 1024
+10; 1 | -min-parallelism/max-parallelism <numprobes> | 10; 1
+-sC | nmap <Target_IP> -sC | -sC
+-script default | nmap <Target_IP> -script default | -script default
+-script | nmap <Target_IP> -script=banner | -script
+-script | nmap <Target_IP> -script=http* | -script
+-script | nmap <Target_IP> -script=http,banner | -script
+-script | nmap <Target_IP> -script "not intrusive" | -script
+-script-args | nmap -script snmp-sysdescr -script-args snmpcommunity=admin <Target_IP> | -script-args
+http site map generator | nmap -Pn -script=http-sitemap-generator <Domain_Name> | http site map generator
+Nmap (-n -Pn) | nmap -n -Pn -p <Port> -open -sV -vvv -script banner,http-title -iR 1000 | Fast search for random web servers
+Nmap (-Pn) | nmap -Pn -script=dns-brute <Domain_Name> | Brute forces DNS hostnames guessing subdomains
+Safe SMB scripts to run | nmap -n -Pn -vv -O -sV -script smb-enum*,smb-ls,smb-mbenum,smb-os-discovery,smb-s*,smb-vuln*,smbv2* -vv <Target_IP> | Safe SMB scripts to run
+Nmap (-p80) | nmap -p80 -script http-unsafe-output-escaping <Domain_Name> | Detect cross site scripting vulnerabilities
+Check for SQL injections | nmap -p80 -script http-sql-injection <Domain_Name> | Check for SQL injections
+-mtu | nmap <Target_IP> -mtu 32 | -mtu
+-D | nmap -D <Target_IP>,<Target_IP>,<Target_IP>,<Target_IP> <Target_IP> | -D
+-D | nmap -D decoy-ip1,decoy-ip2,your-own-ip,decoy-ip3,decoy-ip4 remote-host-ip | -D
+-S | nmap -S <Domain_Name> <Domain_Name> | -S
+-g | nmap -g 53 <Target_IP> | -g
+-proxies | nmap -proxies <URL> <URL> <Target_IP> | -proxies
+-data-length | nmap -data-length 200 <Target_IP> | -data-length
+-oN | nmap <Target_IP> -oN normal.file | -oN
+-oX | nmap <Target_IP> -oX xml.file | -oX
+-oG | nmap <Target_IP> -oG grep.file | -oG
+-oA | nmap <Target_IP> -oA results | -oA
+-oG - | nmap <Target_IP> -oG - | -oG -
+-append-output | nmap <Target_IP> -oN file.file -append-output | -append-output
+-v | nmap <Target_IP> -v | -v
+-d | nmap <Target_IP> -d | -d
+-reason | nmap <Target_IP> -reason | -reason
+-open | nmap <Target_IP> -open | -open
+-packet-trace | nmap <Target_IP> -T4 -packet-trace | -packet-trace
+-iflist | nmap -iflist | -iflist
+-resume | nmap -resume results.file | -resume
+Nmap (-p80 -sV) | nmap -p80 -sV -oG - -open <Subnet_CIDR> | grep open | Scan for web servers and grep to show which IPs are running web servers
+Nmap (-iR -n) | nmap -iR 10 -n -oX out.xml | grep "Nmap" | cut -d " " -f5 > live-hosts.txt | Generate a list of the IPs of live hosts
+Nmap (-iR -n) | nmap -iR 10 -n -oX out2.xml | grep "Nmap" | cut -d " " -f5 >> live-hosts.txt | Append IP to the list of live hosts
+Ndiff scanl.xml | ndiff scanl.xml scan2.xml | Compare output from nmap using the ndif
+Xsltproc (-o) | xsltproc nmap.xml -o nmap.html | Convert nmap xml files to html files
+Grep (-r -c) | grep " open " results.nmap | sed -r ‘s/ +/ <File_Path>’ | sort | uniq -c | sort -rn | less | Reverse sorted list of how often ports turn up
+-6 | nmap -6 2607:f0d0:1002:51::4 | -6
+-h | nmap -h | -h
+Nmap (-iR -v) | nmap -iR 10 -PS22-25,80,113,1050,35000 -v -sn | Discovery only on ports x, no port scan
+Nmap (-sL) | nmap <Target_IP>-50 -sL -dns-server <Target_IP> | Query the Internal DNS for hosts, list targets only
+Nmap | nmap <Target_IP> --packet-trace | Show the details of the packets that are sent and received during a scan and capture the traffic.
+-sS -T2 | nmap -sS -T2 <Target_IP> | -sS -T2
+-sT | nmap -sT <Target_IP> | -sT
+-sA | nmap -sA <Target_IP> | -sA
+-sU -sV --top-ports 20 | nmap -sU -sV --top-ports 20 <Target_IP> | -sU -sV --top-ports 20
+Nmap (-sS -T0) | nmap -sS -T0 -f --data-length 64 --scan-delay 10s <Target_IP> | 5 minutes between probes, fragment packets to evade simple packet filters, append random data to avoid signature detection, add additional delay between probes
+Nmap (-sS -iL) | nmap -sS --randomize-hosts -iL targets.txt -T2 --max-retries 1 | Don't scan sequentially, don't retry aggressively, look more like organic network traffic.
+Filtered | Nmap can't determine if the port is open because packet filtering (firewall, IPS, router ACL) is preventing probes from reaching it. You're not getting responses—you're getting silence. | Filtered
+Open-Filtered | Nmap can't tell if the port is open or filtered. | Open-Filtered

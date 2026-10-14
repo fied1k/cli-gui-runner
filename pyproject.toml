@@ -38,6 +38,7 @@ dev = [
 
 [project.scripts]
 cli-gui-runner = "cli_gui_runner:main"
+cheatsheet-scraper = "cheatsheet_scraper:main"
 
 [project.urls]
 Homepage = "https://github.com/fied1k/cli-gui-runner"

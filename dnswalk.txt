@@ -1,0 +1,21 @@
+# Format: Button Name | Command Template | Description (Optional)
+# Scraped from https://offensiveramen.com/cheatsheets/dnswalk
+# Command: dnswalk
+
+OVERVIEW | dnswalk is a DNS debugger that performs zone transfers and checks | OVERVIEW
+Check DNS zone | dnswalk <domain>. | Check DNS zone (trailing dot required)
+Recursive check of subdomains | dnswalk -r <domain>. | Recursive check of subdomains
+Force zone transfer | dnswalk -f <domain>. | Force zone transfer (no check for SOA)
+OPTIONS | dnswalk -a <domain>. | Turn on warning for duplicate A records
+Debug mode (print DNS queries) | dnswalk -d <domain>. | Debug mode (print DNS queries)
+OPTIONS | dnswalk -i <domain>. | Suppress check for invalid characters
+Check lame delegations | dnswalk -l <domain>. | Check lame delegations
+Check for missing reverse | dnswalk -m <domain>. | Check for missing reverse (PTR) records
+Basic zone check | dnswalk <Domain_Name>. | Basic zone check
+Recursive check with all warnings | dnswalk -r -a -l -m <Domain_Name>. | Recursive check with all warnings
+Debug mode to see all queries | dnswalk -d <Domain_Name>. | Debug mode to see all queries
+Strict checking mode | dnswalk -F <Domain_Name>. | Strict checking mode
+EXAMPLES | dnswalk -l <Domain_Name>. | Check with lame delegation detection
+NOTES | zone transfers | NOTES
+NOTES | zones you | NOTES
+NOTES | more complete | NOTES

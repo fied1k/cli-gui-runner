@@ -1,0 +1,52 @@
+# Format: Button Name | Command Template | Description (Optional)
+# Scraped from https://offensiveramen.com/cheatsheets/api-security
+# Command: ffuf
+
+OWASP API SECURITY TOP 10 (2023) | other users' | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | GET <File_Path> | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | missing auth | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | data exposure | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | expensive operations | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | user accessing | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | regular user | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | in webhook/callback | OWASP API SECURITY TOP 10 (2023)
+OWASP API SECURITY TOP 10 (2023) | vs <File_Path>, | OWASP API SECURITY TOP 10 (2023)
+REST API TESTING | Endpoint Discovery: | REST API TESTING
+Wordlist-based discovery | ffuf -u <URL> -w <File_Path> | Wordlist-based discovery
+REST API TESTING | gobuster dir -u <URL> -w api-endpoints.txt | REST API TESTING
+REST API TESTING | curl -X $method <URL> -v | REST API TESTING
+GRAPHQL TESTING | POST <File_Path> | GRAPHQL TESTING
+GRAPHQL TESTING | See GRAPHQL-SECURITY.txt for comprehensive GraphQL testing. | GRAPHQL TESTING
+AUTHENTICATION BYPASS TECHNIQUES | Token Manipulation: | AUTHENTICATION BYPASS TECHNIQUES
+Try different auth schemes | Basic YWRtaW46YWRtaW4= | Try different auth schemes
+AUTHENTICATION BYPASS TECHNIQUES | Bearer <token> | AUTHENTICATION BYPASS TECHNIQUES
+Decode JWT | echo "eyJhbG..." | base64 -d | Decode JWT
+Weak secret brute force | hashcat -a 0 -m 16500 jwt.txt <File_Path> | Weak secret brute force
+AUTHENTICATION BYPASS TECHNIQUES | john jwt.txt --wordlist=rockyou.txt --format=HMAC-SHA256 | AUTHENTICATION BYPASS TECHNIQUES
+Systematic ID enumeration | GET <File_Path>  (your order) | Systematic ID enumeration
+BOLA/BFLA TESTING | GET <File_Path>  (someone else's order) | BOLA/BFLA TESTING
+Parameter pollution | GET <File_Path>?user_id=victim_id | Parameter pollution
+Horizontal privilege escalation | PUT <File_Path> {"role":"admin"} | Horizontal privilege escalation
+Vertical privilege escalation | POST <File_Path>  (as regular user) | Vertical privilege escalation
+BOLA/BFLA TESTING | DELETE <File_Path>  (as regular user) | BOLA/BFLA TESTING
+Method-based bypass | GET <File_Path>   (blocked) | Method-based bypass
+BOLA/BFLA TESTING | POST <File_Path>  (might work) | BOLA/BFLA TESTING
+Rotate IP values on each request | Endpoint Variations: | Rotate IP values on each request
+RATE LIMITING BYPASS | /api/v1/login vs <File_Path> | RATE LIMITING BYPASS
+MASS ASSIGNMENT | PUT <File_Path> | Step 2: Try adding extra fields in update request
+POSTMAN / INSOMNIA TIPS | targets (dev/staging/prod) | POSTMAN / INSOMNIA TIPS
+POSTMAN / INSOMNIA TIPS | dynamic token | POSTMAN / INSOMNIA TIPS
+POSTMAN / INSOMNIA TIPS | Export collections | POSTMAN / INSOMNIA TIPS
+POSTMAN / INSOMNIA TIPS | hmac = | POSTMAN / INSOMNIA TIPS
+POSTMAN / INSOMNIA TIPS | dynamic values | POSTMAN / INSOMNIA TIPS
+POSTMAN / INSOMNIA TIPS | references across | POSTMAN / INSOMNIA TIPS
+Wayback Machine | waybackurls <Domain_Name> | grep -i "api\|v1\|v2\|graphql" | Wayback Machine
+Certificate Transparency | crt.sh -> find subdomains -> <Domain_Name>, <Domain_Name> | Certificate Transparency
+API ENUMERATION | subfinder -d <Domain_Name> | grep api | Subdomain enumeration for API subdomains
+Directory brute forcing | ffuf -u <URL> -w api-wordlist.txt -mc 200,201,204,301,302,401,403 | Directory brute forcing
+Kiterunner | kr scan <URL> -w routes-large.kite | Kiterunner (API-specific discovery)
+TOOLS | testing proxy | TOOLS
+TOOLS | endpoint discovery | TOOLS
+TOOLS | schema visualization | TOOLS
+TOOLS | testing platform | TOOLS
+COMMON API SECURITY HEADERS | Response Headers to Check: | COMMON API SECURITY HEADERS
