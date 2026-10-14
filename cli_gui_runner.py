@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tkinter.scrolledtext import ScrolledText
 
+__version__ = "0.1.0"
+
 DEFAULT_COMMANDS_FILE = "commands.txt"
 PASTE_COMMANDS_PATH = "PasteCommands.txt"
 

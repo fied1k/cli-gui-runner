@@ -135,22 +135,20 @@ def main():
     parser.add_argument("--bump", choices=["major", "minor", "patch", "none"], help="Explicitly specify bump level.")
     args = parser.parse_args()
 
-    print("==> 1. Checking repository status...")
-    # Fetch remote tags and commits first to stay in sync
+    # If a commit message is provided or unstaged changes exist, stage and commit first
+    if args.message:
+        print(f"==> 1. Staging and committing changes with message: '{args.message}'...")
+        run(["git", "add", "."])
+        status = run(["git", "status", "--porcelain"], capture=True)
+        if status:
+            run(["git", "commit", "-m", args.message])
+
+    print("==> 2. Fetching remote updates and tags...")
     try:
         run(["git", "fetch", "--tags", "origin"])
         run(["git", "pull", "--rebase", "origin", "main"], check=False)
     except Exception as e:
         print(f"    (Note during pull: {e})")
-
-    # If a commit message is provided, stage and commit first
-    if args.message:
-        print(f"==> 2. Staging and committing changes with message: '{args.message}'...")
-        run(["git", "add", "."])
-        # Only commit if there are changes
-        status = run(["git", "status", "--porcelain"], capture=True)
-        if status:
-            run(["git", "commit", "-m", args.message])
 
     # Determine bump level
     current_ver = get_current_version()
