@@ -7,12 +7,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from cli_gui_runner import CommandRunnerGUI
 
 
-class DummyApp:
-    """Mock helper inheriting parsing methods without instantiating Tkinter."""
-    parse_line = CommandRunnerGUI.parse_line
-    _normalize_command_string = CommandRunnerGUI._normalize_command_string
-    _generate_label_from_command = CommandRunnerGUI._generate_label_from_command
-    format_raw_paste_text = CommandRunnerGUI.format_raw_paste_text
+class DummyApp(CommandRunnerGUI):
+    """Mock helper inheriting methods without instantiating full Tkinter UI."""
+    def __init__(self):
+        class MockVar:
+            def get(self):
+                return False
+        self.auto_param_var = MockVar()
 
 
 class TestCommandParsing(unittest.TestCase):

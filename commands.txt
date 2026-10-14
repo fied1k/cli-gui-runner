@@ -14,3 +14,75 @@ Limit Packets | tshark -i <interface> -c <packet_count> | Automatically stops th
 Write to File | tshark -i <interface> -w <output_file> | Saves raw packet data directly to a file for later analysis.
 Read from File | tshark -r <input_file> | Reads and analyzes an existing packet capture file.
 Display Filter | tshark -r <input_file> -Y "<filter>" | Filters the output using standard Wireshark display filter syntax.
+
+Limit Packets | tshark -i <interface> -c 100 | Automatically stops the capture after receiving a specific number of packets.
+Write to File | tshark -i <interface> -w output.pcapng | Saves raw packet data directly to a file for later analysis instead of printing to screen.
+Read from File | tshark -r input.pcapng | Reads and analyzes an existing packet capture file.
+Display Filter | tshark -r input.pcapng -Y "http" | Filters the output using standard Wireshark display filter syntax.
+
+Basic scan (top 1000 ports) | nmap <target> | Basic scan (top 1000 ports)
+Ping scan (host discovery only) | nmap -sn <target> | Ping scan (host discovery only)
+BASIC SCANS# | nmap -Pn <target> | Skip host discovery, treat as online
+Scan all 65535 ports | nmap -p- <target> | Scan all 65535 ports
+Scan specific ports | nmap -p <Port> <target> | Scan specific ports
+SCAN TYPES# | nmap -sS <target> | SYN scan (stealth, default with root)
+SCAN TYPES# | nmap -sT <target> | TCP connect scan (no root needed)
+UDP scan | nmap -sU <target> | UDP scan
+ACK scan (firewall detection) | nmap -sA <target> | ACK scan (firewall detection)
+Window scan | nmap -sW <target> | Window scan
+FIN scan | nmap -sF <target> | FIN scan
+Xmas scan | nmap -sX <target> | Xmas scan
+Service version detection | nmap -sV <target> | Service version detection
+SERVICE & VERSION DETECTION# | nmap -sV --version-intensity 5 | More aggressive version detection
+Try all probes | nmap -sV --version-all <target> | Try all probes
+OS detection | nmap -O <target> | OS detection
+SERVICE & VERSION DETECTION# | nmap -A <target> | Aggressive (OS, version, script, traceroute)
+Paranoid (IDS evasion) | nmap -T0 <target> | Paranoid (IDS evasion)
+Sneaky | nmap -T1 <target> | Sneaky
+Polite | nmap -T2 <target> | Polite
+Normal (default) | nmap -T3 <target> | Normal (default)
+Aggressive | nmap -T4 <target> | Aggressive
+Insane | nmap -T5 <target> | Insane
+Limit retries | nmap --max-retries 1 <target> | Limit retries
+Send at least 1000 packets/sec | nmap --min-rate 1000 <target> | Send at least 1000 packets/sec
+Run specific script | nmap --script=<script> <target> | Run specific script
+Run default scripts | nmap --script=default <target> | Run default scripts
+Run vulnerability scripts | nmap --script=vuln <target> | Run vulnerability scripts
+Run safe scripts | nmap --script=safe <target> | Run safe scripts
+Authentication scripts | nmap --script=auth <target> | Authentication scripts
+Discovery scripts | nmap --script=discovery <target> | Discovery scripts
+Pass args to scripts | nmap --script-args=<args> | Pass args to scripts
+Enumerate web directories | nmap --script=http-enum <target> | Enumerate web directories
+SMB vulnerability check | nmap --script=smb-vuln* <target> | SMB vulnerability check
+Heartbleed check | nmap --script=ssl-heartbleed <target> | Heartbleed check
+DNS brute force | nmap --script=dns-brute <target> | DNS brute force
+Anonymous FTP check | nmap --script=ftp-anon <target> | Anonymous FTP check
+SSH brute force | nmap --script=ssh-brute <target> | SSH brute force
+Normal output | nmap -oN output.txt <target> | Normal output
+XML output | nmap -oX output.xml <target> | XML output
+Grepable output | nmap -oG output.gnmap <target> | Grepable output
+All formats | nmap -oA output <target> | All formats
+Verbose | nmap -v <target> | Verbose
+Very verbose | nmap -vv <target> | Very verbose
+Fragment packets | nmap -f <target> | Fragment packets
+Set MTU | nmap --mtu 24 <target> | Set MTU
+Decoy scan with random IPs | nmap -D RND:5 <target> | Decoy scan with random IPs
+Decoy scan with specific IPs | nmap -D decoy1,decoy2 <target> | Decoy scan with specific IPs
+Spoof source IP | nmap -S <spoofed-ip> <target> | Spoof source IP
+Use source port 53 | nmap -g 53 <target> | Use source port 53
+Append random data | nmap --data-length 25 <target> | Append random data
+Single host | nmap <Target_IP> | Single host
+Multiple hosts | nmap <Target_IP> <Target_IP> | Multiple hosts
+Range | nmap <Target_IP>-254 | Range
+CIDR notation | nmap <Subnet_CIDR> | CIDR notation
+From file | nmap -iL targets.txt | From file
+Exclude host | nmap --exclude <Target_IP> | Exclude host
+Exclude from file | nmap --excludefile exclude.txt | Exclude from file
+Quick scan of common ports | nmap -F -T4 <target> | Quick scan of common ports
+Full TCP scan with versions | nmap -sV -sC -p- <target> | Full TCP scan with versions
+Comprehensive scan | nmap -sS -sV -sC -O -p- -T4 <target> | Comprehensive scan
+Stealth scan | nmap -sS -Pn -T2 -f <target> | Stealth scan
+UDP top ports | nmap -sU --top-ports 100 <target> | UDP top ports
+Vulnerability assessment | nmap -sV --script=vuln <target> | Vulnerability assessment
+Extract open ports | grep "open" output.gnmap | cut -d" " -f2
+GREP EXAMPLES# | grep "80/open" output.gnmap | cut -d" " -f2
