@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-15
+
+
 ### Added
 - **Dynamic Field Re-Mapping**: Interactive column mapping in the verification modal allowing users to assign columns (`Switch`, `Example`, `Description`, `Category`, `Ignore`) on the fly.
 - **Adaptive Rule Learning**: Importer automatically learns custom header keywords and structural column signatures, remembering how to parse non-standard tables for future imports.
@@ -67,7 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zero-dependency local version bumping script (`scripts/bump_version.py`).
 - **Unit Test Suite**: Full test coverage for command parsing, delimiter recognition, placeholder normalization, and TSV extraction.
 
-[Unreleased]: https://github.com/fied1k/cli-gui-runner/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/fied1k/cli-gui-runner/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/fied1k/cli-gui-runner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/fied1k/cli-gui-runner/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/fied1k/cli-gui-runner/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/fied1k/cli-gui-runner/compare/v0.2.0...v0.3.0
