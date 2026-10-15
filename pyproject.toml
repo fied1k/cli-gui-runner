@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cli-gui-runner"
-version = "0.9.0"
+version = "0.9.1"
 description = "Interactive CLI Quick-Reference & Cheat Sheet GUI Runner with parameter extraction and live terminal streaming"
 readme = "README.md"
 authors = [
