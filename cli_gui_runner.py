@@ -21,7 +21,7 @@ from cheatsheet_engine import (
     StandaloneGenerator,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 DEFAULT_COMMANDS_FILE = "commands.txt"
 PASTE_COMMANDS_PATH = "PasteCommands.txt"
