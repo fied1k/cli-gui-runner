@@ -125,6 +125,16 @@ def update_changelog(new_version, summary_lines=None):
             lines.insert(insert_idx, new_section + "\n")
             content = "".join(lines)
 
+    # Update compare link references at the bottom if present
+    unreleased_pattern = r"\[Unreleased\]:\s*(https://[^\s]+/compare/v([0-9]+\.[0-9]+\.[0-9]+)\.\.\.HEAD)"
+    match = re.search(unreleased_pattern, content)
+    if match:
+        prev_ver = match.group(2)
+        base_url = match.group(1).rsplit("/compare/", 1)[0]
+        unreleased_link = f"[Unreleased]: {base_url}/compare/v{new_version}...HEAD"
+        new_version_link = f"[{new_version}]: {base_url}/compare/v{prev_ver}...v{new_version}"
+        content = re.sub(unreleased_pattern, f"{unreleased_link}\n{new_version_link}", content, count=1)
+
     with open(CHANGELOG_FILE, "w", encoding="utf-8") as f:
         f.write(content)
 

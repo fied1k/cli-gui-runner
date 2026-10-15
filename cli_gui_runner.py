@@ -8,7 +8,7 @@ import urllib.request
 import urllib.error
 from html.parser import HTMLParser
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 from tkinter.scrolledtext import ScrolledText
 
 from cheatsheet_engine import (
@@ -19,6 +19,16 @@ from cheatsheet_engine import (
     TabularColumnMapper,
     KeyValueBlockParser,
     StandaloneGenerator,
+    LearnedMappingRule,
+    LearnedMappingRegistry,
+    get_mapping_registry,
+    ROLE_SWITCH,
+    ROLE_TEMPLATE,
+    ROLE_DESC,
+    ROLE_CATEGORY,
+    ROLE_IGNORE,
+    FIELD_ROLE_LABELS,
+    ROLE_CHOICES,
 )
 
 __version__ = "0.5.0"
@@ -307,50 +317,253 @@ class WebCommandExtractor(HTMLParser):
 
 class ParserVerificationDialog(tk.Toplevel):
     """
-    Interactive confirmation modal for parsed cheat sheets.
+    Interactive confirmation and field-mapping modal for parsed cheat sheets.
     Displays extracted categories, buttons (switch), templates (example), and descriptions.
-    Asks the user if the parsing is correct and allows swapping columns or editing.
+    Allows changing field mappings for any column, selecting from learned parsing strategies,
+    swapping columns, and learning/remembering new mapping rules for future cheat sheets.
     """
-    def __init__(self, parent, profile: CheatSheetProfile, confidence: float = 1.0, on_confirm=None):
+    def __init__(
+        self,
+        parent,
+        profile: CheatSheetProfile,
+        confidence: float = 1.0,
+        on_confirm=None,
+        raw_rows: Optional[List[List[str]]] = None,
+        headers: Optional[List[str]] = None,
+        applied_rule_name: str = "Standard (Switch | Example | Description)",
+        initial_mapping: Optional[Dict[str, int]] = None
+    ):
         super().__init__(parent)
         self.profile = profile
         self.confidence = confidence
         self.on_confirm = on_confirm
-        self.title(f"Verify Parsed Cheat Sheet: {profile.title}")
-        self.geometry("920x580")
-        self.minsize(720, 420)
+        self.raw_rows = raw_rows or []
+        self.headers = headers or []
+        self.applied_rule_name = applied_rule_name
+        self.registry = get_mapping_registry()
+
+        # If raw_rows was not provided, synthesize from profile.commands
+        if not self.raw_rows and self.profile.commands:
+            self.raw_rows = [
+                [cmd.switch, cmd.template, cmd.description]
+                for cmd in self.profile.commands
+            ]
+
+        self.col_count = len(self.raw_rows[0]) if self.raw_rows else 3
+
+        # Initial mapping
+        if initial_mapping:
+            self.current_mapping = dict(initial_mapping)
+        elif self.applied_rule_name in self.registry.rules:
+            self.current_mapping = dict(self.registry.rules[self.applied_rule_name].mapping)
+        else:
+            self.current_mapping = {ROLE_SWITCH: 0, ROLE_TEMPLATE: 1, ROLE_DESC: 2, ROLE_CATEGORY: -1}
+
+        self.title(f"Verify & Map Fields: {profile.title}")
+        self.geometry("980x640")
+        self.minsize(780, 480)
         self.transient(parent)
         self.grab_set()
 
-        banner = ttk.Frame(self, padding=12)
+        # Build UI
+        self._build_header_banner()
+        self._build_mapping_controls()
+        self._build_preview_table()
+        self._build_action_bar()
+
+        self._refresh_tree()
+
+    def _build_header_banner(self):
+        banner = ttk.Frame(self, padding=(12, 10, 12, 6))
         banner.pack(fill=tk.X)
 
         conf_pct = int(self.confidence * 100)
         conf_color = "#107c10" if conf_pct >= 90 else ("#d83b01" if conf_pct < 70 else "#0078d4")
 
+        title_row = ttk.Frame(banner)
+        title_row.pack(fill=tk.X)
         ttk.Label(
-            banner,
-            text=f"Are these parsed values correct for '{profile.title}'?",
+            title_row,
+            text=f"Verify Field Mapping for '{self.profile.title}'",
             font=("Segoe UI", 12, "bold")
-        ).pack(anchor="w")
+        ).pack(side=tk.LEFT)
 
-        info_text = (
-            f"Detected {len(profile.commands)} command(s) across {len(profile.categories)} category/categories "
-            f"with {conf_pct}% confidence."
+        self.strategy_badge = ttk.Label(
+            title_row,
+            text=f"Strategy: {self.applied_rule_name} ({conf_pct}% conf)",
+            font=("Segoe UI", 9, "bold"),
+            foreground=conf_color
         )
-        if profile.reference_notes:
-            info_text += f" ({len(profile.reference_notes)} reference/tip notes detected)"
+        self.strategy_badge.pack(side=tk.RIGHT)
 
-        ttk.Label(banner, text=info_text, font=("Segoe UI", 9, "bold"), foreground=conf_color).pack(anchor="w", pady=(2, 4))
         ttk.Label(
             banner,
-            text="Verify that the Switch (Button Text), Example (Command Template), and Description columns are accurately mapped.",
+            text="Map input columns to their corresponding roles (Switch, Command Template, Description, Category). "
+                 "The system remembers your mapping and adds it as a persistent way to parse future inputs.",
             font=("Segoe UI", 9),
             foreground="#555555"
-        ).pack(anchor="w")
+        ).pack(anchor="w", pady=(2, 0))
 
-        # Table
-        tbl_frame = ttk.Frame(self, padding=(12, 0, 12, 10))
+    def _build_mapping_controls(self):
+        map_frame = ttk.LabelFrame(self, text="Field Mapping Configuration", padding=8)
+        map_frame.pack(fill=tk.X, padx=12, pady=(4, 6))
+
+        # Top row: Strategy preset selector
+        top_row = ttk.Frame(map_frame)
+        top_row.pack(fill=tk.X, pady=(0, 6))
+
+        ttk.Label(top_row, text="Parsing Strategy / Learned Rule:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+
+        rule_names = list(self.registry.rules.keys()) + ["Custom Mapping"]
+        self.rule_var = tk.StringVar(value=self.applied_rule_name if self.applied_rule_name in rule_names else "Custom Mapping")
+        self.rule_combo = ttk.Combobox(top_row, textvariable=self.rule_var, values=rule_names, state="readonly", width=42)
+        self.rule_combo.pack(side=tk.LEFT, padx=(0, 10))
+        self.rule_combo.bind("<<ComboboxSelected>>", self._on_rule_selected)
+
+        ttk.Button(top_row, text="Swap Switch & Example", command=self.swap_columns).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(top_row, text="Save as Learned Rule...", command=self.save_as_learned_rule).pack(side=tk.LEFT, padx=(0, 6))
+
+        # Bottom row: Column-by-column role dropdowns
+        cols_container = ttk.Frame(map_frame)
+        cols_container.pack(fill=tk.X)
+
+        self.col_combos = []
+        role_labels_list = list(FIELD_ROLE_LABELS.values())
+
+        for idx in range(self.col_count):
+            c_box = ttk.Frame(cols_container, padding=4, relief="groove")
+            c_box.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=3)
+
+            hdr_name = f" \"{self.headers[idx]}\"" if (idx < len(self.headers) and self.headers[idx]) else ""
+            ttk.Label(c_box, text=f"Column {idx + 1}{hdr_name}:", font=("Segoe UI", 8, "bold")).pack(anchor="w")
+
+            initial_role = ROLE_IGNORE
+            for r_key, r_idx in self.current_mapping.items():
+                if r_idx == idx:
+                    initial_role = r_key
+                    break
+
+            var = tk.StringVar(value=FIELD_ROLE_LABELS.get(initial_role, "Ignore / Skip"))
+            cb = ttk.Combobox(c_box, textvariable=var, values=role_labels_list, state="readonly", width=22)
+            cb.pack(fill=tk.X, pady=(2, 0))
+            cb.bind("<<ComboboxSelected>>", lambda e, col=idx, v=var: self._on_col_role_changed(col, v.get()))
+            self.col_combos.append(var)
+
+    def _on_col_role_changed(self, col_idx: int, selected_label: str):
+        role_key = ROLE_IGNORE
+        for k, v in FIELD_ROLE_LABELS.items():
+            if v == selected_label:
+                role_key = k
+                break
+
+        if role_key != ROLE_IGNORE:
+            for k in list(self.current_mapping.keys()):
+                if self.current_mapping[k] == col_idx:
+                    self.current_mapping[k] = -1
+            self.current_mapping[role_key] = col_idx
+        else:
+            for k in list(self.current_mapping.keys()):
+                if self.current_mapping[k] == col_idx:
+                    self.current_mapping[k] = -1
+
+        for idx, var in enumerate(self.col_combos):
+            assigned_role = ROLE_IGNORE
+            for r_key, r_idx in self.current_mapping.items():
+                if r_idx == idx:
+                    assigned_role = r_key
+                    break
+            var.set(FIELD_ROLE_LABELS.get(assigned_role, "Ignore / Skip"))
+
+        self.rule_var.set("Custom Mapping")
+        self._apply_current_mapping()
+
+    def _on_rule_selected(self, event=None):
+        rule_name = self.rule_var.get()
+        if rule_name in self.registry.rules:
+            rule = self.registry.rules[rule_name]
+            self.current_mapping = dict(rule.mapping)
+            for idx, var in enumerate(self.col_combos):
+                assigned_role = ROLE_IGNORE
+                for r_key, r_idx in self.current_mapping.items():
+                    if r_idx == idx:
+                        assigned_role = r_key
+                        break
+                var.set(FIELD_ROLE_LABELS.get(assigned_role, "Ignore / Skip"))
+            self._apply_current_mapping()
+
+    def swap_columns(self):
+        sw_idx = self.current_mapping.get(ROLE_SWITCH, -1)
+        tm_idx = self.current_mapping.get(ROLE_TEMPLATE, -1)
+        self.current_mapping[ROLE_SWITCH] = tm_idx
+        self.current_mapping[ROLE_TEMPLATE] = sw_idx
+
+        for idx, var in enumerate(self.col_combos):
+            assigned_role = ROLE_IGNORE
+            for r_key, r_idx in self.current_mapping.items():
+                if r_idx == idx:
+                    assigned_role = r_key
+                    break
+            var.set(FIELD_ROLE_LABELS.get(assigned_role, "Ignore / Skip"))
+
+        for cmd in self.profile.commands:
+            cmd.switch, cmd.template = cmd.template, cmd.switch
+
+        self.rule_var.set("Custom Mapping")
+        self._apply_current_mapping()
+
+    def _apply_current_mapping(self):
+        if not self.raw_rows:
+            self._refresh_tree()
+            return
+
+        new_commands = []
+        for cells in self.raw_rows:
+            item = self.registry.apply_mapping_to_parts(cells, self.current_mapping)
+            new_commands.append(item)
+
+        self.profile.commands = new_commands
+        cats = list(dict.fromkeys(c.category for c in new_commands))
+        self.profile.categories = cats or ["General"]
+
+        self._refresh_tree()
+        if hasattr(self, "strategy_badge") and self.strategy_badge and hasattr(self, "rule_var"):
+            try:
+                self.strategy_badge.config(text=f"Mapping: {self.rule_var.get()}")
+            except Exception:
+                pass
+
+    def save_as_learned_rule(self):
+        name = simpledialog.askstring(
+            "Save Learned Mapping Rule",
+            "Enter a name for this parsing rule so the program remembers it:",
+            initialvalue=f"Custom-{self.col_count}Col",
+            parent=self
+        )
+        if not name or not name.strip():
+            return
+
+        name = name.strip()
+        rule = self.registry.learn_rule(
+            name=name,
+            mapping=self.current_mapping,
+            headers=self.headers,
+            sample_rows=self.raw_rows,
+            col_count=self.col_count,
+            description=f"User-taught mapping for {self.col_count} columns"
+        )
+
+        all_rules = list(self.registry.rules.keys()) + ["Custom Mapping"]
+        self.rule_combo.config(values=all_rules)
+        self.rule_var.set(name)
+        self.strategy_badge.config(text=f"Saved & Applied: {name}")
+        messagebox.showinfo(
+            "Mapping Saved",
+            f"Rule '{name}' has been learned and saved!\nFuture inputs matching this layout will be parsed automatically.",
+            parent=self
+        )
+
+    def _build_preview_table(self):
+        tbl_frame = ttk.Frame(self, padding=(12, 0, 12, 8))
         tbl_frame.pack(fill=tk.BOTH, expand=True)
 
         cols = ("cat", "switch", "template", "desc")
@@ -361,9 +574,9 @@ class ParserVerificationDialog(tk.Toplevel):
         self.tree.heading("desc", text="Description")
 
         self.tree.column("cat", width=140, anchor="w")
-        self.tree.column("switch", width=150, anchor="w")
-        self.tree.column("template", width=280, anchor="w")
-        self.tree.column("desc", width=310, anchor="w")
+        self.tree.column("switch", width=160, anchor="w")
+        self.tree.column("template", width=300, anchor="w")
+        self.tree.column("desc", width=320, anchor="w")
 
         vsb = ttk.Scrollbar(tbl_frame, orient="vertical", command=self.tree.yview)
         hsb = ttk.Scrollbar(tbl_frame, orient="horizontal", command=self.tree.xview)
@@ -375,28 +588,36 @@ class ParserVerificationDialog(tk.Toplevel):
         tbl_frame.columnconfigure(0, weight=1)
         tbl_frame.rowconfigure(0, weight=1)
 
-        self._refresh_tree()
-
-        # Action bar
-        btn_bar = ttk.Frame(self, padding=12)
-        btn_bar.pack(fill=tk.X)
-
-        ttk.Button(btn_bar, text="Swap Switch & Example Columns", command=self.swap_columns).pack(side=tk.LEFT, padx=(0, 6))
-        ttk.Button(btn_bar, text="Confirm & Import Cheat Sheet", command=self.confirm).pack(side=tk.RIGHT, padx=6)
-        ttk.Button(btn_bar, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
-
     def _refresh_tree(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
         for cmd in self.profile.commands:
             self.tree.insert("", tk.END, values=(cmd.category, cmd.switch, cmd.template, cmd.description))
 
-    def swap_columns(self):
-        for cmd in self.profile.commands:
-            cmd.switch, cmd.template = cmd.template, cmd.switch
-        self._refresh_tree()
+    def _build_action_bar(self):
+        btn_bar = ttk.Frame(self, padding=12)
+        btn_bar.pack(fill=tk.X)
+
+        self.remember_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            btn_bar,
+            text="Remember this field mapping as a learned parsing rule",
+            variable=self.remember_var
+        ).pack(side=tk.LEFT)
+
+        ttk.Button(btn_bar, text="Confirm & Import Cheat Sheet", command=self.confirm).pack(side=tk.RIGHT, padx=6)
+        ttk.Button(btn_bar, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
 
     def confirm(self):
+        if self.remember_var.get() and self.rule_var.get() == "Custom Mapping":
+            rule_name = f"Learned ({' | '.join(self.headers[:3])})" if self.headers else f"Learned {self.col_count}-Col"
+            self.registry.learn_rule(
+                name=rule_name,
+                mapping=self.current_mapping,
+                headers=self.headers,
+                sample_rows=self.raw_rows,
+                col_count=self.col_count
+            )
         if self.on_confirm:
             self.on_confirm(self.profile)
         self.destroy()
@@ -1489,6 +1710,9 @@ class CommandRunnerGUI:
             current_tab = notebook.index(notebook.select())
             profile = None
             confidence = 0.85
+            raw_data_rows = None
+            detected_headers = None
+            applied_rule_name = "Standard (Switch | Example | Description)"
 
             if current_tab == 0:
                 url = url_var.get().strip()
@@ -1513,12 +1737,18 @@ class CommandRunnerGUI:
                     if "cs-sheet" in html_text or "cs-h" in html_text or "<pre" in html_text:
                         profile = OffensiveRamenHTMLParser.parse_html(html_text, sheet_id=sheet_id, title=sheet_name)
                         confidence = 0.95
+                        raw_data_rows = [[cmd.switch, cmd.template, cmd.description] for cmd in profile.commands]
+                        detected_headers = ["Switch", "Example", "Description"]
+                        applied_rule_name = "HTML Cheat Sheet Parser"
                     else:
                         entries = self.extract_commands_from_html(html_text)
                         profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name, source=url)
                         for lbl, cmd, dsc in entries:
                             profile.add_command(CommandItem(lbl, cmd, dsc, "General"))
                         confidence = 0.85
+                        raw_data_rows = [[lbl, cmd, dsc] for lbl, cmd, dsc in entries]
+                        detected_headers = ["Button Label", "Command Template", "Description"]
+                        applied_rule_name = "HTML Command Extractor"
                 except Exception as e:
                     messagebox.showerror("Fetch Error", f"Failed to fetch webpage:\n{e}", parent=win)
                     status_var.set("Fetch failed.")
@@ -1539,18 +1769,27 @@ class CommandRunnerGUI:
                     for it in items:
                         profile.add_command(it)
                     confidence = 0.92
+                    raw_data_rows = [[it.switch, it.template, it.description] for it in items]
+                    detected_headers = ["Switch", "Example", "Description"]
+                    applied_rule_name = "Key-Value Block Parser"
                 elif any("\t" in l or "|" in l for l in lines):
-                    items, conf = TabularColumnMapper.parse_rows(lines)
+                    res = TabularColumnMapper.parse_rows(lines)
                     profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name)
-                    for it in items:
+                    for it in res.items:
                         profile.add_command(it)
-                    confidence = conf
+                    confidence = res.confidence
+                    raw_data_rows = res.raw_rows
+                    detected_headers = res.headers
+                    applied_rule_name = res.rule_name
                 else:
                     entries = self.format_raw_paste_text(raw_text)
                     profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name)
                     for lbl, cmd, dsc in entries:
                         profile.add_command(CommandItem(lbl, cmd, dsc, "General"))
                     confidence = 0.80
+                    raw_data_rows = [[lbl, cmd, dsc] for lbl, cmd, dsc in entries]
+                    detected_headers = ["Button Label", "Command Template", "Description"]
+                    applied_rule_name = "Raw Prose Parser"
 
             if not profile or not profile.commands:
                 messagebox.showinfo("No Commands Found", "No valid CLI commands could be identified in the provided source.", parent=win)
@@ -1566,7 +1805,15 @@ class CommandRunnerGUI:
                 win.destroy()
                 messagebox.showinfo("Import Successful", f"Imported '{verified_profile.title}' with {len(verified_profile.commands)} command(s)!")
 
-            ParserVerificationDialog(win, profile, confidence=confidence, on_confirm=on_confirmed)
+            ParserVerificationDialog(
+                win,
+                profile,
+                confidence=confidence,
+                on_confirm=on_confirmed,
+                raw_rows=raw_data_rows,
+                headers=detected_headers,
+                applied_rule_name=applied_rule_name
+            )
 
         btn_bar = ttk.Frame(win, padding=10)
         btn_bar.pack(fill=tk.X)

@@ -534,79 +534,542 @@ class OffensiveRamenHTMLParser(HTMLParser):
 
 
 # -----------------------------------------------------------------------------
-# Parser Strategy B: Tabular & Delimited Column Mapper (TSV / Pipe / Markdown)
+# Parser Strategy B: Tabular & Delimited Column Mapper with Learned Mappings
 # -----------------------------------------------------------------------------
+ROLE_SWITCH = "switch"
+ROLE_TEMPLATE = "template"
+ROLE_DESC = "desc"
+ROLE_CATEGORY = "category"
+ROLE_IGNORE = "ignore"
+
+FIELD_ROLE_LABELS: Dict[str, str] = {
+    ROLE_SWITCH: "Switch (Button Text)",
+    ROLE_TEMPLATE: "Example (Command Template)",
+    ROLE_DESC: "Description",
+    ROLE_CATEGORY: "Category",
+    ROLE_IGNORE: "Ignore / Skip"
+}
+
+ROLE_CHOICES: List[Tuple[str, str]] = [
+    (ROLE_SWITCH, "Switch (Button Text)"),
+    (ROLE_TEMPLATE, "Example (Command Template)"),
+    (ROLE_DESC, "Description"),
+    (ROLE_CATEGORY, "Category"),
+    (ROLE_IGNORE, "Ignore / Skip")
+]
+
+
+class LearnedMappingRule:
+    """Represents a persistent learned or preset column-to-field mapping rule."""
+    def __init__(
+        self,
+        name: str,
+        mapping: Dict[str, int],
+        col_count: int = 3,
+        headers: Optional[List[str]] = None,
+        delimiter: Optional[str] = None,
+        description: str = "",
+        signature: Optional[Dict[str, Any]] = None,
+        is_builtin: bool = False,
+        use_count: int = 0
+    ):
+        self.name = name
+        self.mapping = dict(mapping)
+        self.col_count = col_count
+        self.headers = [h.lower().strip() for h in (headers or []) if h.strip()]
+        self.delimiter = delimiter
+        self.description = description
+        self.signature = signature or {}
+        self.is_builtin = is_builtin
+        self.use_count = use_count
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "mapping": self.mapping,
+            "col_count": self.col_count,
+            "headers": self.headers,
+            "delimiter": self.delimiter,
+            "description": self.description,
+            "signature": self.signature,
+            "is_builtin": self.is_builtin,
+            "use_count": self.use_count
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LearnedMappingRule":
+        return cls(
+            name=data.get("name", "Custom Rule"),
+            mapping=data.get("mapping", {"switch": 0, "template": 1, "desc": 2, "category": -1}),
+            col_count=data.get("col_count", 3),
+            headers=data.get("headers", []),
+            delimiter=data.get("delimiter", None),
+            description=data.get("description", ""),
+            signature=data.get("signature", {}),
+            is_builtin=data.get("is_builtin", False),
+            use_count=data.get("use_count", 0)
+        )
+
+
+class TabularParseResult:
+    """Wrapper that can unpack as (items, confidence) for backwards compatibility while providing rich metadata."""
+    def __init__(
+        self,
+        items: List[CommandItem],
+        confidence: float,
+        rule_name: str = "Standard (Switch | Example | Description)",
+        raw_rows: Optional[List[List[str]]] = None,
+        headers: Optional[List[str]] = None,
+        mapping: Optional[Dict[str, int]] = None
+    ):
+        self.items = items
+        self.confidence = confidence
+        self.rule_name = rule_name
+        self.raw_rows = raw_rows or []
+        self.headers = headers or []
+        self.mapping = mapping or {"switch": 0, "template": 1, "desc": 2, "category": -1}
+
+    def __iter__(self):
+        return iter((self.items, self.confidence))
+
+    def __getitem__(self, index):
+        return (self.items, self.confidence)[index]
+
+
+class LearnedMappingRegistry:
+    """
+    Manages persistent learned field-mapping rules.
+    Remembers user-defined mappings and automatically matches them against new inputs.
+    """
+    def __init__(self, filepath: Optional[str] = None):
+        self.filepath = filepath or os.path.join(os.path.dirname(__file__), "profiles", "learned_mappings.json")
+        self.rules: Dict[str, LearnedMappingRule] = {}
+        self.header_keywords: Dict[str, List[str]] = {
+            ROLE_SWITCH: ["switch", "flag", "option", "button", "name", "param", "parameter", "arg", "sw"],
+            ROLE_TEMPLATE: ["example", "command", "syntax", "template", "usage", "exec", "code", "run", "cmd"],
+            ROLE_DESC: ["desc", "description", "detail", "details", "explanation", "info", "meaning", "purpose", "notes", "summary"],
+            ROLE_CATEGORY: ["cat", "category", "section", "group", "type", "topic"]
+        }
+        self.load()
+
+    def _init_defaults(self):
+        defaults = [
+            LearnedMappingRule(
+                name="Standard (Switch | Example | Description)",
+                mapping={"switch": 0, "template": 1, "desc": 2, "category": -1},
+                col_count=3,
+                headers=["switch", "example", "description"],
+                description="Column 0: Switch/Button, Column 1: Command Template, Column 2: Description",
+                signature={"roles": ["switch", "template", "desc"]},
+                is_builtin=True
+            ),
+            LearnedMappingRule(
+                name="Inverted (Example | Switch | Description)",
+                mapping={"switch": 1, "template": 0, "desc": 2, "category": -1},
+                col_count=3,
+                headers=["example", "switch", "description"],
+                description="Column 0: Command Template, Column 1: Switch/Button, Column 2: Description",
+                signature={"roles": ["template", "switch", "desc"]},
+                is_builtin=True
+            ),
+            LearnedMappingRule(
+                name="Doc Style (Description | Example | Switch)",
+                mapping={"switch": 2, "template": 1, "desc": 0, "category": -1},
+                col_count=3,
+                headers=["description", "example", "switch"],
+                description="Column 0: Description, Column 1: Command Template, Column 2: Switch",
+                signature={"roles": ["desc", "template", "switch"]},
+                is_builtin=True
+            ),
+            LearnedMappingRule(
+                name="Action Table (Description | Switch | Example)",
+                mapping={"switch": 1, "template": 2, "desc": 0, "category": -1},
+                col_count=3,
+                headers=["description", "switch", "example"],
+                description="Column 0: Description, Column 1: Switch, Column 2: Command Template",
+                signature={"roles": ["desc", "switch", "template"]},
+                is_builtin=True
+            ),
+            LearnedMappingRule(
+                name="Categorized (Category | Switch | Example | Description)",
+                mapping={"category": 0, "switch": 1, "template": 2, "desc": 3},
+                col_count=4,
+                headers=["category", "switch", "example", "description"],
+                description="Column 0: Category, Column 1: Switch, Column 2: Command, Column 3: Description",
+                signature={"roles": ["category", "switch", "template", "desc"]},
+                is_builtin=True
+            ),
+            LearnedMappingRule(
+                name="Two-Column (Example | Description)",
+                mapping={"switch": -1, "template": 0, "desc": 1, "category": -1},
+                col_count=2,
+                headers=["example", "description"],
+                description="Column 0: Command Template, Column 1: Description (Switch auto-generated)",
+                signature={"roles": ["template", "desc"]},
+                is_builtin=True
+            ),
+            LearnedMappingRule(
+                name="Two-Column (Switch | Example)",
+                mapping={"switch": 0, "template": 1, "desc": -1, "category": -1},
+                col_count=2,
+                headers=["switch", "example"],
+                description="Column 0: Switch, Column 1: Command Template (Description auto-generated)",
+                signature={"roles": ["switch", "template"]},
+                is_builtin=True
+            )
+        ]
+        for d in defaults:
+            self.rules[d.name] = d
+
+    def _ensure_builtins(self):
+        defaults_registry = LearnedMappingRegistry.__new__(LearnedMappingRegistry)
+        defaults_registry.rules = {}
+        defaults_registry._init_defaults()
+        for k, v in defaults_registry.rules.items():
+            if k not in self.rules:
+                self.rules[k] = v
+
+    def load(self):
+        if not os.path.exists(self.filepath):
+            self._init_defaults()
+            self.save()
+            return
+
+        try:
+            with open(self.filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.rules = {}
+            for item in data.get("rules", []):
+                r = LearnedMappingRule.from_dict(item)
+                self.rules[r.name] = r
+            if "header_keywords" in data:
+                for k, v in data["header_keywords"].items():
+                    if k in self.header_keywords:
+                        self.header_keywords[k] = list(dict.fromkeys(self.header_keywords[k] + v))
+            self._ensure_builtins()
+        except Exception as e:
+            print(f"[LearnedMappingRegistry] Error loading {self.filepath}: {e}")
+            self._init_defaults()
+
+    def save(self):
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(self.filepath)), exist_ok=True)
+            payload = {
+                "rules": [r.to_dict() for r in self.rules.values()],
+                "header_keywords": self.header_keywords
+            }
+            with open(self.filepath, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+        except Exception as e:
+            print(f"[LearnedMappingRegistry] Error saving {self.filepath}: {e}")
+
+    @staticmethod
+    def classify_column(values: List[str]) -> str:
+        """Classifies a list of column values into an inferred role: template, switch, desc, or category."""
+        clean_vals = [v.strip() for v in values if v.strip()]
+        if not clean_vals:
+            return ROLE_DESC
+
+        total = len(clean_vals)
+        flag_cnt = 0
+        cmd_cnt = 0
+        prose_cnt = 0
+
+        for val in clean_vals:
+            # 1. Flag check
+            if val.startswith(("-", "--", "/")) or (len(val) <= 15 and " " not in val and re.match(r"^[A-Za-z0-9_\-]+$", val)):
+                flag_cnt += 1
+
+            # 2. Command check
+            tokens = val.split()
+            first_tok = os.path.basename(tokens[0]).lower().lstrip("$>") if tokens else ""
+            if (
+                first_tok in KNOWN_EXECUTABLES
+                or val.startswith(("$", ">"))
+                or re.search(r"\b-[a-zA-Z0-9_\-]+", val)
+                or re.search(r"[<\{][^>\}\s]+[>\}]", val)
+            ):
+                cmd_cnt += 1
+
+            # 3. Prose check
+            if len(val) >= 28 or len(tokens) >= 4 or any(w in val.lower() for w in ("the", "to", "for", "scan", "detect", "displays", "shows")):
+                prose_cnt += 1
+
+        if cmd_cnt / total >= 0.45:
+            return ROLE_TEMPLATE
+        if flag_cnt / total >= 0.45:
+            return ROLE_SWITCH
+        if prose_cnt / total >= 0.40:
+            return ROLE_DESC
+
+        return ROLE_DESC
+
+    def learn_rule(
+        self,
+        name: str,
+        mapping: Dict[str, int],
+        headers: Optional[List[str]] = None,
+        sample_rows: Optional[List[List[str]]] = None,
+        col_count: Optional[int] = None,
+        delimiter: Optional[str] = None,
+        description: str = ""
+    ) -> LearnedMappingRule:
+        """Registers a newly learned field-mapping rule and updates keyword dictionaries."""
+        if not col_count:
+            valid_indices = [idx for idx in mapping.values() if idx >= 0]
+            col_count = max(valid_indices) + 1 if valid_indices else 3
+
+        # Learn header keywords
+        if headers:
+            for role, idx in mapping.items():
+                if 0 <= idx < len(headers):
+                    hdr = headers[idx].lower().strip()
+                    if hdr and hdr not in self.header_keywords.get(role, []):
+                        self.header_keywords.setdefault(role, []).append(hdr)
+
+        # Build signature from sample rows
+        signature: Dict[str, Any] = {}
+        if sample_rows:
+            inferred_roles = []
+            for col_idx in range(col_count):
+                col_vals = [row[col_idx] for row in sample_rows if col_idx < len(row)]
+                inferred_roles.append(self.classify_column(col_vals))
+            signature["roles"] = inferred_roles
+
+        rule = LearnedMappingRule(
+            name=name,
+            mapping=mapping,
+            col_count=col_count,
+            headers=headers or [],
+            delimiter=delimiter,
+            description=description or f"Learned mapping for {col_count} columns",
+            signature=signature,
+            is_builtin=False
+        )
+        self.rules[name] = rule
+        self.save()
+        return rule
+
+    def match_rule(
+        self,
+        headers: Optional[List[str]] = None,
+        sample_rows: Optional[List[List[str]]] = None,
+        col_count: Optional[int] = None,
+        delimiter: Optional[str] = None
+    ) -> Tuple[Optional[LearnedMappingRule], float]:
+        """Matches input against learned rules and returns (best_rule, confidence)."""
+        # 1. Exact or keyword header matching
+        if headers and len(headers) >= 2:
+            norm_hdrs = [h.lower().strip() for h in headers if h.strip()]
+            for rule in self.rules.values():
+                if rule.headers and len(rule.headers) == len(norm_hdrs):
+                    if all(rh in nh or nh in rh for rh, nh in zip(rule.headers, norm_hdrs)):
+                        return rule, 0.98
+
+            best_kw_rule = None
+            best_kw_score = 0
+            for rule in self.rules.values():
+                if rule.col_count == len(norm_hdrs):
+                    score = 0
+                    for role, idx in rule.mapping.items():
+                        if 0 <= idx < len(norm_hdrs):
+                            hdr = norm_hdrs[idx]
+                            if any(kw in hdr for kw in self.header_keywords.get(role, [])):
+                                score += 1
+                    if score > best_kw_score:
+                        best_kw_score = score
+                        best_kw_rule = rule
+
+            if best_kw_rule and best_kw_score >= 2:
+                return best_kw_rule, 0.95
+
+        # 2. Structural signature matching from sample rows
+        if sample_rows and col_count:
+            inferred_roles = []
+            for col_idx in range(col_count):
+                vals = [r[col_idx] for r in sample_rows if col_idx < len(r)]
+                inferred_roles.append(self.classify_column(vals))
+
+            best_sig_rule = None
+            best_sig_score = 0
+            for rule in self.rules.values():
+                if rule.col_count == col_count and "roles" in rule.signature:
+                    match_count = sum(1 for a, b in zip(rule.signature["roles"], inferred_roles) if a == b)
+                    if match_count > best_sig_score:
+                        best_sig_score = match_count
+                        best_sig_rule = rule
+
+            if best_sig_rule and best_sig_score >= min(col_count, 2):
+                return best_sig_rule, 0.90
+
+            for rule in self.rules.values():
+                if rule.col_count == col_count:
+                    match_count = 0
+                    for role, idx in rule.mapping.items():
+                        if 0 <= idx < len(inferred_roles) and inferred_roles[idx] == role:
+                            match_count += 1
+                    if match_count >= 2:
+                        return rule, 0.88
+
+        return None, 0.50
+
+    def apply_mapping_to_parts(
+        self,
+        parts: List[str],
+        mapping: Dict[str, int],
+        default_category: str = "General"
+    ) -> CommandItem:
+        """Applies a column mapping dictionary to split tokens and returns a CommandItem."""
+        sw_idx = mapping.get(ROLE_SWITCH, -1)
+        tm_idx = mapping.get(ROLE_TEMPLATE, -1)
+        ds_idx = mapping.get(ROLE_DESC, -1)
+        ct_idx = mapping.get(ROLE_CATEGORY, -1)
+
+        sw = parts[sw_idx].strip() if (0 <= sw_idx < len(parts)) else ""
+        tm = parts[tm_idx].strip() if (0 <= tm_idx < len(parts)) else ""
+        ds = parts[ds_idx].strip() if (0 <= ds_idx < len(parts)) else ""
+        ct = parts[ct_idx].strip() if (0 <= ct_idx < len(parts)) else default_category
+
+        norm_tm = VariableNormalizer.normalize(tm) if tm else ""
+        if not sw:
+            sw = TabularColumnMapper._default_switch(norm_tm, ds)
+        if not ds:
+            ds = TabularColumnMapper._default_desc(sw, norm_tm)
+
+        return CommandItem(switch=sw, template=norm_tm, description=ds, category=ct or default_category)
+
+
+_GLOBAL_REGISTRY: Optional[LearnedMappingRegistry] = None
+
+
+def get_mapping_registry(filepath: Optional[str] = None) -> LearnedMappingRegistry:
+    """Returns the singleton LearnedMappingRegistry instance."""
+    global _GLOBAL_REGISTRY
+    if _GLOBAL_REGISTRY is None or filepath is not None:
+        _GLOBAL_REGISTRY = LearnedMappingRegistry(filepath)
+    return _GLOBAL_REGISTRY
+
+
 class TabularColumnMapper:
     """
-    Parses table data with flexible column orders:
-    Detects Switch, Example, and Description whether columns are ordered
-    (Switch, Example, Desc), (Example, Switch, Desc), or custom.
+    Parses table data with flexible column orders.
+    Employs persistent learned mappings, header recognition, and structural heuristics.
     """
     @staticmethod
-    def parse_rows(rows: List[str], default_category: str = "General") -> Tuple[List[CommandItem], float]:
+    def parse_rows(
+        rows: List[str],
+        default_category: str = "General",
+        rule_name: Optional[str] = None,
+        explicit_mapping: Optional[Dict[str, int]] = None
+    ) -> TabularParseResult:
         entries: List[CommandItem] = []
         if not rows:
-            return entries, 1.0
+            return TabularParseResult(entries, 1.0, "Empty")
 
-        switch_col = -1
-        example_col = -1
-        desc_col = -1
-        has_header = False
+        registry = get_mapping_registry()
 
-        # Check first non-empty row for header names
-        first_row = rows[0]
-        delim = "\t" if "\t" in first_row else ("|" if "|" in first_row else None)
-        if delim:
-            raw_cells = [c.strip().lower() for c in first_row.split(delim) if c.strip()]
-            for idx, c in enumerate(raw_cells):
-                if any(k in c for k in ("switch", "flag", "option", "button", "name", "action")):
-                    switch_col = idx
-                elif any(k in c for k in ("example", "command", "syntax", "template", "usage", "exec")):
-                    example_col = idx
-                elif any(k in c for k in ("desc", "detail", "explanation", "info", "meaning", "purpose")):
-                    desc_col = idx
+        # Clean rows and identify headers
+        detected_headers: List[str] = []
+        data_rows: List[str] = []
+        parsed_row_cells: List[List[str]] = []
 
-            if switch_col != -1 and example_col != -1:
-                has_header = True
-
-        data_rows = rows[1:] if has_header else rows
-        for row_str in data_rows:
-            line = row_str.strip()
-            if not line or line.startswith("#"):
+        first_non_empty = None
+        for r in rows:
+            clean_r = r.strip()
+            if not clean_r or clean_r.startswith("#"):
                 continue
-
-            # Skip markdown separator rows like | --- | --- | --- |
-            if all(c in "-|: \t" for c in line):
+            if all(c in "-|: \t" for c in clean_r):
                 continue
+            if first_non_empty is None:
+                first_non_empty = clean_r
+            else:
+                data_rows.append(clean_r)
 
-            delim = "\t" if "\t" in line else ("|" if "|" in line else None)
-            if not delim:
-                continue
+        if not first_non_empty:
+            return TabularParseResult(entries, 1.0, "Empty")
 
-            parts = [p.strip() for p in line.split(delim)]
-            # Clean markdown table boundary bars
+        # Determine delimiter
+        delim = "\t" if "\t" in first_non_empty else ("|" if "|" in first_non_empty else ("," if "," in first_non_empty else None))
+
+        def split_row(r_str: str) -> List[str]:
+            if delim:
+                parts = [p.strip() for p in r_str.split(delim)]
+            else:
+                parts = re.split(r"\s{2,}|\t+", r_str)
             if parts and not parts[0]:
                 parts.pop(0)
             if parts and not parts[-1]:
                 parts.pop(-1)
+            return parts
 
-            if len(parts) < 2:
-                continue
+        first_parts = split_row(first_non_empty)
 
-            if has_header and switch_col < len(parts) and example_col < len(parts):
-                sw = parts[switch_col]
-                ex = VariableNormalizer.normalize(parts[example_col])
-                dsc = parts[desc_col] if (desc_col != -1 and desc_col < len(parts)) else ""
-            else:
-                sw, ex, dsc = TabularColumnMapper._heuristic_assign(parts)
+        # Check if first row is a header
+        header_terms = {"switch", "flag", "option", "example", "command", "syntax", "desc", "description", "category", "action", "usage", "meaning", "param", "details"}
+        is_header = any(any(t in p.lower() for t in header_terms) for p in first_parts)
 
-            if not dsc:
-                dsc = TabularColumnMapper._default_desc(sw, ex)
+        if is_header:
+            detected_headers = first_parts
+        else:
+            data_rows.insert(0, first_non_empty)
 
-            entries.append(CommandItem(switch=sw, template=ex, description=dsc, category=default_category))
+        # Parse all data rows into token lists
+        for dr in data_rows:
+            cells = split_row(dr)
+            if len(cells) >= 2:
+                parsed_row_cells.append(cells)
 
-        confidence = 0.95 if has_header else 0.85
-        return entries, confidence
+        col_count = len(parsed_row_cells[0]) if parsed_row_cells else (len(detected_headers) if detected_headers else 3)
+
+        # Resolve mapping rule
+        active_mapping: Optional[Dict[str, int]] = None
+        applied_rule_name = "Heuristic Auto-Detect"
+        confidence = 0.85
+
+        if explicit_mapping:
+            active_mapping = explicit_mapping
+            applied_rule_name = rule_name or "Custom Mapping"
+            confidence = 1.0
+        elif rule_name and rule_name in registry.rules:
+            rule = registry.rules[rule_name]
+            active_mapping = rule.mapping
+            applied_rule_name = rule.name
+            confidence = 0.96
+        else:
+            # Check learned mappings
+            matched_rule, match_conf = registry.match_rule(
+                headers=detected_headers if detected_headers else None,
+                sample_rows=parsed_row_cells[:12],
+                col_count=col_count,
+                delimiter=delim
+            )
+            if matched_rule:
+                active_mapping = matched_rule.mapping
+                applied_rule_name = matched_rule.name
+                confidence = match_conf
+
+        if active_mapping:
+            for cells in parsed_row_cells:
+                item = registry.apply_mapping_to_parts(cells, active_mapping, default_category=default_category)
+                entries.append(item)
+        else:
+            # Fallback to heuristic assignment
+            for cells in parsed_row_cells:
+                sw, ex, dsc = TabularColumnMapper._heuristic_assign(cells)
+                if not dsc:
+                    dsc = TabularColumnMapper._default_desc(sw, ex)
+                entries.append(CommandItem(switch=sw, template=ex, description=dsc, category=default_category))
+            applied_rule_name = "Heuristic Auto-Detect"
+            confidence = 0.90 if detected_headers else 0.80
+
+        return TabularParseResult(
+            items=entries,
+            confidence=confidence,
+            rule_name=applied_rule_name,
+            raw_rows=parsed_row_cells,
+            headers=detected_headers,
+            mapping=active_mapping or {"switch": 0, "template": 1, "desc": 2, "category": -1}
+        )
 
     @staticmethod
     def _heuristic_assign(parts: List[str]) -> Tuple[str, str, str]:
@@ -626,14 +1089,26 @@ class TabularColumnMapper:
         is_p1_switch = p1.startswith(("-", "--", "/"))
 
         if is_p0_cmd and is_p1_switch:
-            # Example | Switch | Description
             return p1, VariableNormalizer.normalize(p0), p2
         elif is_p0_switch and is_p1_cmd:
-            # Switch | Example | Description
             return p0, VariableNormalizer.normalize(p1), p2
         else:
-            # Standard: Switch/Label | Command | Description
             return p0, VariableNormalizer.normalize(p1), p2
+
+    @staticmethod
+    def _default_switch(cmd: str, desc: str = "") -> str:
+        tokens = cmd.split()
+        if not tokens:
+            return "Command"
+        flags = [t for t in tokens[1:] if t.startswith("-") and len(t) <= 18]
+        if flags:
+            return " ".join(flags[:2])
+        base = os.path.basename(tokens[0])
+        if len(tokens) > 1 and not tokens[1].startswith(("<", "{", "[")):
+            return f"{base} {tokens[1]}"
+        if desc and len(desc) <= 18:
+            return desc
+        return base
 
     @staticmethod
     def _default_desc(switch: str, example: str) -> str:

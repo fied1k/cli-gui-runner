@@ -1,0 +1,228 @@
+{
+  "rules": [
+    {
+      "name": "Standard (Switch | Example | Description)",
+      "mapping": {
+        "switch": 0,
+        "template": 1,
+        "desc": 2,
+        "category": -1
+      },
+      "col_count": 3,
+      "headers": [
+        "switch",
+        "example",
+        "description"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Switch/Button, Column 1: Command Template, Column 2: Description",
+      "signature": {
+        "roles": [
+          "switch",
+          "template",
+          "desc"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    },
+    {
+      "name": "Inverted (Example | Switch | Description)",
+      "mapping": {
+        "switch": 1,
+        "template": 0,
+        "desc": 2,
+        "category": -1
+      },
+      "col_count": 3,
+      "headers": [
+        "example",
+        "switch",
+        "description"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Command Template, Column 1: Switch/Button, Column 2: Description",
+      "signature": {
+        "roles": [
+          "template",
+          "switch",
+          "desc"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    },
+    {
+      "name": "Doc Style (Description | Example | Switch)",
+      "mapping": {
+        "switch": 2,
+        "template": 1,
+        "desc": 0,
+        "category": -1
+      },
+      "col_count": 3,
+      "headers": [
+        "description",
+        "example",
+        "switch"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Description, Column 1: Command Template, Column 2: Switch",
+      "signature": {
+        "roles": [
+          "desc",
+          "template",
+          "switch"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    },
+    {
+      "name": "Action Table (Description | Switch | Example)",
+      "mapping": {
+        "switch": 1,
+        "template": 2,
+        "desc": 0,
+        "category": -1
+      },
+      "col_count": 3,
+      "headers": [
+        "description",
+        "switch",
+        "example"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Description, Column 1: Switch, Column 2: Command Template",
+      "signature": {
+        "roles": [
+          "desc",
+          "switch",
+          "template"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    },
+    {
+      "name": "Categorized (Category | Switch | Example | Description)",
+      "mapping": {
+        "category": 0,
+        "switch": 1,
+        "template": 2,
+        "desc": 3
+      },
+      "col_count": 4,
+      "headers": [
+        "category",
+        "switch",
+        "example",
+        "description"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Category, Column 1: Switch, Column 2: Command, Column 3: Description",
+      "signature": {
+        "roles": [
+          "category",
+          "switch",
+          "template",
+          "desc"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    },
+    {
+      "name": "Two-Column (Example | Description)",
+      "mapping": {
+        "switch": -1,
+        "template": 0,
+        "desc": 1,
+        "category": -1
+      },
+      "col_count": 2,
+      "headers": [
+        "example",
+        "description"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Command Template, Column 1: Description (Switch auto-generated)",
+      "signature": {
+        "roles": [
+          "template",
+          "desc"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    },
+    {
+      "name": "Two-Column (Switch | Example)",
+      "mapping": {
+        "switch": 0,
+        "template": 1,
+        "desc": -1,
+        "category": -1
+      },
+      "col_count": 2,
+      "headers": [
+        "switch",
+        "example"
+      ],
+      "delimiter": null,
+      "description": "Column 0: Switch, Column 1: Command Template (Description auto-generated)",
+      "signature": {
+        "roles": [
+          "switch",
+          "template"
+        ]
+      },
+      "is_builtin": true,
+      "use_count": 0
+    }
+  ],
+  "header_keywords": {
+    "switch": [
+      "switch",
+      "flag",
+      "option",
+      "button",
+      "name",
+      "param",
+      "parameter",
+      "arg",
+      "sw"
+    ],
+    "template": [
+      "example",
+      "command",
+      "syntax",
+      "template",
+      "usage",
+      "exec",
+      "code",
+      "run",
+      "cmd"
+    ],
+    "desc": [
+      "desc",
+      "description",
+      "detail",
+      "details",
+      "explanation",
+      "info",
+      "meaning",
+      "purpose",
+      "notes",
+      "summary"
+    ],
+    "category": [
+      "cat",
+      "category",
+      "section",
+      "group",
+      "type",
+      "topic"
+    ]
+  }
+}

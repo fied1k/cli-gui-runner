@@ -140,6 +140,81 @@ kismet --daemonize
         compiled_obj = compile(code, "<standalone_runner>", "exec")
         self.assertIsNotNone(compiled_obj)
 
+    def test_learned_mapping_registry_and_learning(self):
+        import tempfile
+        from cheatsheet_engine import LearnedMappingRegistry, ROLE_SWITCH, ROLE_TEMPLATE, ROLE_DESC
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            custom_json = os.path.join(tmpdir, "test_mappings.json")
+            reg = LearnedMappingRegistry(custom_json)
+
+            # Teach a new mapping: Col 0: Description, Col 1: Template, Col 2: Switch
+            reg.learn_rule(
+                name="German Cheatsheet Format",
+                mapping={ROLE_DESC: 0, ROLE_TEMPLATE: 1, ROLE_SWITCH: 2, "category": -1},
+                headers=["hinweis", "aufruf", "option"],
+                col_count=3,
+                description="Custom German Header Format"
+            )
+
+            # Reload into a fresh registry instance to test persistence
+            reg2 = LearnedMappingRegistry(custom_json)
+            self.assertIn("German Cheatsheet Format", reg2.rules)
+            rule = reg2.rules["German Cheatsheet Format"]
+            self.assertEqual(rule.mapping[ROLE_DESC], 0)
+            self.assertEqual(rule.mapping[ROLE_TEMPLATE], 1)
+            self.assertEqual(rule.mapping[ROLE_SWITCH], 2)
+
+            # Test matching by header keywords
+            matched, conf = reg2.match_rule(headers=["Hinweis", "Aufruf", "Option"])
+            self.assertIsNotNone(matched)
+            self.assertEqual(matched.name, "German Cheatsheet Format")
+            self.assertGreaterEqual(conf, 0.95)
+
+    def test_tabular_column_mapper_adaptive_learning(self):
+        import tempfile
+        from cheatsheet_engine import LearnedMappingRegistry, get_mapping_registry, ROLE_SWITCH, ROLE_TEMPLATE, ROLE_DESC
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_json = os.path.join(tmpdir, "mappings.json")
+            reg = LearnedMappingRegistry(test_json)
+
+            # Register inverted layout: Col 0 is Description, Col 1 is Command, Col 2 is Switch
+            reg.learn_rule(
+                name="Desc_First_Layout",
+                mapping={ROLE_DESC: 0, ROLE_TEMPLATE: 1, ROLE_SWITCH: 2, "category": -1},
+                headers=["details", "syntax", "flag"],
+                col_count=3
+            )
+
+            # Use singleton getter with our test registry
+            orig_reg = get_mapping_registry(test_json)
+
+            # Parse a table using those custom headers
+            test_rows = [
+                "Details\tSyntax\tFlag",
+                "Scan top common ports\tnmap -F 192.168.1.1\t-F",
+                "Operating system detection\tnmap -O 192.168.1.1\t-O"
+            ]
+
+            res = TabularColumnMapper.parse_rows(test_rows, default_category="Nmap")
+            self.assertEqual(res.rule_name, "Desc_First_Layout")
+            self.assertGreaterEqual(res.confidence, 0.95)
+
+            items = res.items
+            self.assertEqual(len(items), 2)
+            # Verify correct field assignments
+            self.assertEqual(items[0].description, "Scan top common ports")
+            self.assertIn("nmap -F", items[0].template)
+            self.assertEqual(items[0].switch, "-F")
+
+            self.assertEqual(items[1].description, "Operating system detection")
+            self.assertIn("nmap -O", items[1].template)
+            self.assertEqual(items[1].switch, "-O")
+
+            # Restore default global registry
+            get_mapping_registry(os.path.join(os.path.dirname(__file__), "..", "profiles", "learned_mappings.json"))
+
 
 if __name__ == "__main__":
     unittest.main()

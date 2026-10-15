@@ -110,6 +110,45 @@ class TestCommandParsing(unittest.TestCase):
         self.assertEqual(prof.commands[0].switch, "Stealth Scan")
         self.assertEqual(prof.commands[0].template, "nmap -sS")
 
+    def test_verification_dialog_mapping_reassignment(self):
+        from cheatsheet_engine import CheatSheetProfile, CommandItem, ROLE_SWITCH, ROLE_TEMPLATE, ROLE_DESC
+        from cli_gui_runner import ParserVerificationDialog
+
+        prof = CheatSheetProfile(sheet_id="remap_test", title="Remap Test")
+        raw_rows = [
+            ["Perform stealth port scan", "nmap -sS <target>", "-sS"],
+            ["Detect remote operating system", "nmap -O <target>", "-O"]
+        ]
+
+        # Col 0: Desc, Col 1: Template, Col 2: Switch
+        mapping = {ROLE_DESC: 0, ROLE_TEMPLATE: 1, ROLE_SWITCH: 2, "category": -1}
+
+        # Test headless logic using dialog helper
+        dialog = ParserVerificationDialog.__new__(ParserVerificationDialog)
+        dialog.profile = prof
+        dialog.raw_rows = raw_rows
+        dialog.col_count = 3
+        dialog.current_mapping = mapping
+        dialog.registry = type("MockReg", (), {})()
+        from cheatsheet_engine import get_mapping_registry
+        dialog.registry = get_mapping_registry()
+        dialog._refresh_tree = lambda *a: None
+        dialog.rule_var = type("MockVar", (), {"get": lambda *a: "Custom Mapping"})()
+        dialog.strategy_badge = type("MockBadge", (), {"config": lambda *a, **k: None})()
+
+        dialog._apply_current_mapping()
+
+        self.assertEqual(len(dialog.profile.commands), 2)
+        # Verify first command has correct mappings
+        self.assertEqual(dialog.profile.commands[0].description, "Perform stealth port scan")
+        self.assertEqual(dialog.profile.commands[0].template, "nmap -sS <target>")
+        self.assertEqual(dialog.profile.commands[0].switch, "-sS")
+
+        # Verify second command
+        self.assertEqual(dialog.profile.commands[1].description, "Detect remote operating system")
+        self.assertEqual(dialog.profile.commands[1].template, "nmap -O <target>")
+        self.assertEqual(dialog.profile.commands[1].switch, "-O")
+
 
 if __name__ == "__main__":
     unittest.main()
