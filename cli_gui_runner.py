@@ -34,7 +34,7 @@ from cheatsheet_engine import (
 )
 from prerequisite_detector import PrerequisiteDetector, ToolPrerequisite
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 # Ensure working directory matches script location for relative assets
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

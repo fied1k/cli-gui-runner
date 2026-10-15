@@ -1,7 +1,7 @@
 # CLI Quick-Reference GUI Runner
 
 [![Release](https://img.shields.io/github/v/release/fied1k/cli-gui-runner?include_prereleases&style=flat-square&color=blue)](https://github.com/fied1k/cli-gui-runner/releases)
-[![Version](https://img.shields.io/badge/version-v0.8.0-blue.svg?style=flat-square)](https://github.com/fied1k/cli-gui-runner/releases/tag/v0.8.0)
+[![Version](https://img.shields.io/badge/version-v0.9.0-blue.svg?style=flat-square)](https://github.com/fied1k/cli-gui-runner/releases/tag/v0.9.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg?style=flat-square)](https://www.python.org/)
 [![CI](https://github.com/fied1k/cli-gui-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/fied1k/cli-gui-runner/actions/workflows/ci.yml)
@@ -10,9 +10,9 @@
 An intuitive, lightweight desktop GUI application that transforms static CLI cheat sheets, runbooks, and command templates into an interactive execution dashboard. Parameterize commands on the fly, stream live terminal output, and easily import command tables or clipboard snippets.
 
 <!-- RELEASE_INFO_START -->
-### Latest Release: v0.8.0
+### Latest Release: v0.9.0
 
-- **Standalone Windows Executable**: Download [`CliGuiRunner.exe`](CliGuiRunner.exe) directly from the repository root or from [GitHub Releases](https://github.com/fied1k/cli-gui-runner/releases/tag/v0.8.0) (Zero installation required).
+- **Standalone Windows Executable**: Download [`CliGuiRunner.exe`](CliGuiRunner.exe) directly from the repository root or from [GitHub Releases](https://github.com/fied1k/cli-gui-runner/releases/tag/v0.9.0) (Zero installation required).
 - **Quick Batch Launcher**: Double-click [`run.bat`](run.bat) to launch in development mode with error pause.
 - **Release Notes**: See [CHANGELOG.md](CHANGELOG.md) for full history.
 <!-- RELEASE_INFO_END -->
