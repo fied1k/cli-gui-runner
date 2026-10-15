@@ -33,7 +33,7 @@ from cheatsheet_engine import (
     ROLE_CHOICES,
 )
 
-__version__ = "0.7.3"
+__version__ = "0.8.0"
 
 # Ensure working directory matches script location for relative assets
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
