@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import re
 import ssl
 import json
@@ -632,6 +633,7 @@ class CommandRunnerGUI:
         self.current_process = None
         self.current_file = DEFAULT_COMMANDS_FILE
         self.auto_param_var = tk.BooleanVar(value=True)
+        self.persistent_console_var = tk.BooleanVar(value=True)
 
         self.profiles = {}
         self.profile_labels = {}
@@ -685,7 +687,13 @@ class CommandRunnerGUI:
             tb2,
             text="Auto-detect <Variables>",
             variable=self.auto_param_var
-        ).pack(side=tk.LEFT, padx=8)
+        ).pack(side=tk.LEFT, padx=6)
+
+        ttk.Checkbutton(
+            tb2,
+            text="Persistent Console Window",
+            variable=self.persistent_console_var
+        ).pack(side=tk.LEFT, padx=6)
 
         self.file_label = ttk.Label(tb2, text="", foreground="#555555")
         self.file_label.pack(side=tk.LEFT, padx=6)
@@ -1939,8 +1947,7 @@ class CommandRunnerGUI:
         variables = list(dict.fromkeys(re.findall(r"[<\{]([^>\}\s]+)[>\}]", resolved_cmd)))
 
         if not variables:
-            if messagebox.askyesno("Execute Command", f"Run command immediately?\n\n{resolved_cmd}"):
-                self.execute_command(resolved_cmd)
+            self.execute_command(resolved_cmd)
             return
 
         dialog = tk.Toplevel(self.root)
@@ -2006,12 +2013,49 @@ class CommandRunnerGUI:
         self.output_area.see(tk.END)
 
     def execute_command(self, cmd):
+        self.output_area.delete("1.0", tk.END)
+        self.log_output(f"$ {cmd}\n")
+
+        # Check if persistent console mode is enabled (default)
+        if getattr(self, "persistent_console_var", None) and self.persistent_console_var.get():
+            self.log_output("[Running in persistent console window...]\n" + "-" * 60 + "\n")
+            try:
+                if os.name == "nt":
+                    # cmd.exe /K executes command and remains open, preserving errors and output
+                    creation_flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x10)
+                    self.current_process = subprocess.Popen(
+                        ["cmd.exe", "/K", cmd],
+                        creationflags=creation_flags
+                    )
+                elif sys.platform == "darwin":
+                    escaped = cmd.replace('"', '\\"')
+                    self.current_process = subprocess.Popen(
+                        ["osascript", "-e", f'tell application "Terminal" to do script "{escaped}"']
+                    )
+                else:
+                    # Linux terminal emulators
+                    launched = False
+                    for term in ("x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"):
+                        if shutil.which(term):
+                            self.current_process = subprocess.Popen([term, "-e", f"bash -c '{cmd}; exec bash'"])
+                            launched = True
+                            break
+                    if not launched:
+                        self.current_process = subprocess.Popen(f"{cmd}; exec bash", shell=True)
+
+                self.log_output("[Console window launched. Window remains open after execution.]\n")
+                if hasattr(self, "stop_btn"):
+                    self.stop_btn.config(state=tk.NORMAL)
+            except Exception as e:
+                self.log_output(f"\n[Console Launch Error]: {e}\n")
+            return
+
+        # Embedded streaming execution
         if self.current_process and self.current_process.poll() is None:
             messagebox.showwarning("Busy", "A command is already running. Stop it or wait for it to finish.")
             return
 
-        self.output_area.delete("1.0", tk.END)
-        self.log_output(f"$ {cmd}\n" + "-" * 60 + "\n")
+        self.log_output("-" * 60 + "\n")
         self.stop_btn.config(state=tk.NORMAL)
 
         def target():
@@ -2042,7 +2086,11 @@ class CommandRunnerGUI:
             self.log_output("\n[Process terminated by user]\n")
 
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = CommandRunnerGUI(root)
     root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

