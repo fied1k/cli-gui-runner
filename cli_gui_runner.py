@@ -33,7 +33,7 @@ from cheatsheet_engine import (
     ROLE_CHOICES,
 )
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 DEFAULT_COMMANDS_FILE = "commands.txt"
 PASTE_COMMANDS_PATH = "PasteCommands.txt"
