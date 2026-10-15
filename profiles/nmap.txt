@@ -50,3 +50,21 @@ nmap (top 1000) | nmap <target> | Basic TCP port scan probing the top 1,000 most
 -D (Decoys) | nmap -D RND:5 <target> | Cloak scan using 5 random decoy IP addresses
 -S (Spoof) | nmap -S <spoofed_ip> <target> | Spoof source IP address
 -g (Port 53) | nmap -g 53 <target> | Use source port 53 (DNS) for outbound probes
+
+Check DNS zone | dnswalk <domain>. | Check DNS zone (trailing dot required)
+Recursive check of subdomains | dnswalk -r <domain>. | Recursive check of subdomains
+Force zone transfer | dnswalk -f <domain>. | Force zone transfer (no check for SOA)
+warning for duplicate A records | dnswalk -a <domain>. | Turn on warning for duplicate A records
+Debug mode (print DNS queries) | dnswalk -d <domain>. | Debug mode (print DNS queries)
+suppress check for invalid characters | dnswalk -i <domain>. | Suppress check for invalid characters
+Check lame delegations | dnswalk -l <domain>. | Check lame delegations
+heck for missing reverse (PTR) records | dnswalk -m <domain>. | Check for missing reverse (PTR) records
+Basic zone check | dnswalk <Domain_Name>. | Basic zone check
+Recursive check with all warnings | dnswalk -r -a -l -m <Domain_Name>. | Recursive check with all warnings
+Debug mode to see all queries | dnswalk -d <Domain_Name>. | Debug mode to see all queries
+Strict checking mode | dnswalk -F <Domain_Name>. | Strict checking mode
+Check with lame delegation detection | dnswalk -l <Domain_Name>. | Check with lame delegation detection
+Recursive check with all warnings | dnswalk -r -a -l -m <Domain_Name> | dnswalk -r -a -l -m <Domain_Name>
+Demo Debug mode | dnswalk -d <Domain_Name> | Debug mode to see all queries
+Demo Strict checking mode | dnswalk -F <Domain_Name> | Demo Strict checking mode
+Demo lame delegation detection | dnswalk -l <Domain_Name> | Check with lame delegation detection

@@ -162,6 +162,14 @@ def main():
     update_changelog(next_ver)
     print(f"Updated {os.path.basename(CHANGELOG_FILE)}")
 
+    # 4. Update README.md
+    try:
+        from push import update_readme
+        update_readme(next_ver)
+        print(f"Updated README.md")
+    except Exception:
+        pass
+
     print(f"\nSuccessfully bumped to v{next_ver}!")
     print("Next steps:")
     print(f"  git commit -am 'chore(release): v{next_ver}'")

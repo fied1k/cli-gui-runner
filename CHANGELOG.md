@@ -9,11 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.3] - 2026-10-15
 
+### Fixed
+- **Working Directory Anchoring**: Anchored working directory to script location (`SCRIPT_DIR`) preventing path resolution errors when launched from other directories.
+- **Persistent Error Dialog**: Wrapped application entry point in graphical error message box (`messagebox.showerror`) and interactive pause so fatal startup errors remain visible.
+- **Batch Launcher**: Added `run.bat` batch launcher for Windows with pause on failure.
 
 ## [0.7.2] - 2026-10-15
 
+### Added
+- **Persistent Console Window Mode**: Configured command execution to spawn independent console windows (`cmd.exe /K` with `CREATE_NEW_CONSOLE`) that remain open after execution or on failure.
+- **Console Mode Toggle**: Added checkbox in UI to toggle between persistent external console and embedded streaming terminal.
 
 ## [0.7.1] - 2026-10-15
+
+### Fixed
+- **Missing Module Import**: Added missing `sys` import in `cli_gui_runner.py` for Python executable lookup.
+- **Standalone Binary Rebuild**: Recompiled `CliGuiRunner.exe` with bundled caplets and profiles.
 
 
 ## [0.7.0] - 2026-10-15

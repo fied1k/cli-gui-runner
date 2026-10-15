@@ -1,5 +1,5 @@
 #!/bin/sh
-# Pre-push hook: ensures tests pass and remote tags are fetched
+# Pre-push hook: ensures tests pass, auto-versions, and updates README & CHANGELOG
 echo "==> [pre-push] Verifying test suite before push..."
 python -m unittest discover tests
 if [ $? -ne 0 ]; then
@@ -7,4 +7,27 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 echo "==> [pre-push] Tests passed successfully."
-exit 0
+
+# If push is being orchestrated by push.py, allow it through
+if [ "$SYNC_IN_PROGRESS" = "1" ]; then
+    exit 0
+fi
+
+# If HEAD already points to an annotated release tag, allow standard push
+CURRENT_TAG=$(git tag --points-at HEAD 2>/dev/null)
+if [ -n "$CURRENT_TAG" ]; then
+    exit 0
+fi
+
+# Otherwise, unversioned commits exist: trigger auto-versioning, README & CHANGELOG sync pipeline
+echo "==> [pre-push] Unversioned commits detected. Running auto-versioning, README & CHANGELOG sync..."
+python scripts/push.py --from-hook
+PUSH_STATUS=$?
+if [ $PUSH_STATUS -eq 0 ]; then
+    echo "==> [pre-push] Automated version bump, README & CHANGELOG synchronization complete."
+    # Exit 1 to cleanly stop the redundant raw push since push.py already pushed the release commit and tags
+    exit 1
+else
+    echo "ERROR: Auto-versioning and push pipeline failed."
+    exit 1
+fi
