@@ -35,8 +35,16 @@ from cheatsheet_engine import (
 
 __version__ = "0.7.2"
 
-DEFAULT_COMMANDS_FILE = "commands.txt"
-PASTE_COMMANDS_PATH = "PasteCommands.txt"
+# Ensure working directory matches script location for relative assets
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if os.path.isdir(SCRIPT_DIR) and not hasattr(sys, "_MEIPASS"):
+    try:
+        os.chdir(SCRIPT_DIR)
+    except Exception:
+        pass
+
+DEFAULT_COMMANDS_FILE = os.path.join(SCRIPT_DIR, "commands.txt") if not hasattr(sys, "_MEIPASS") else "commands.txt"
+PASTE_COMMANDS_PATH = os.path.join(SCRIPT_DIR, "PasteCommands.txt") if not hasattr(sys, "_MEIPASS") else "PasteCommands.txt"
 
 SAMPLE_COMMANDS = """# Format: Button Name | Command Template | Description (Optional)
 # Or simply paste raw commands with <variable> or {variable} placeholders!
@@ -2087,9 +2095,31 @@ class CommandRunnerGUI:
 
 
 def main():
-    root = tk.Tk()
-    app = CommandRunnerGUI(root)
-    root.mainloop()
+    try:
+        root = tk.Tk()
+        app = CommandRunnerGUI(root)
+        root.mainloop()
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        print(f"\n[CLI GUI Runner - Fatal Error]:\n{err_msg}", file=sys.stderr)
+        try:
+            from tkinter import messagebox
+            err_win = tk.Tk()
+            err_win.withdraw()
+            messagebox.showerror("CLI GUI Runner - Fatal Error", f"Failed to start:\n\n{err_msg}")
+            err_win.destroy()
+        except Exception:
+            pass
+
+        # If running from a console window, pause so the window does not close
+        if sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+            try:
+                print("\nPress Enter to exit...", end="", flush=True)
+                sys.stdin.readline()
+            except Exception:
+                pass
+        sys.exit(1)
 
 
 if __name__ == "__main__":

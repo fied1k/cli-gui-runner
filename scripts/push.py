@@ -153,10 +153,6 @@ def main():
     parser.add_argument("--no-build", action="store_true", help="Skip compiling standalone executable.")
     args = parser.parse_args()
 
-    # 0. Always compile standalone executable into local folder unless explicitly skipped
-    if not args.no_build:
-        build_standalone_exe()
-
     # If a commit message is provided or unstaged changes exist, stage and commit first
     if args.message:
         print(f"==> 1. Staging and committing changes with message: '{args.message}'...")
@@ -206,15 +202,25 @@ def main():
                 f'"." : "{next_ver}"'
             )
 
+        # Compile standalone executable into local folder
+        if not args.no_build:
+            build_standalone_exe()
+
         # Stage and commit version bump in local folder
-        run(["git", "add", VERSION_FILE, PYPROJECT_FILE, CHANGELOG_FILE])
+        target_exe = os.path.join(ROOT_DIR, "CliGuiRunner.exe")
+        files_to_add = [VERSION_FILE, PYPROJECT_FILE, CHANGELOG_FILE]
         if os.path.exists(manifest_file):
-            run(["git", "add", manifest_file])
+            files_to_add.append(manifest_file)
+        if os.path.exists(target_exe):
+            files_to_add.append(target_exe)
+        run(["git", "add"] + files_to_add)
         run(["git", "commit", "-m", f"chore(release): bump version to v{next_ver} [skip ci]"])
         run(["git", "tag", "-a", f"v{next_ver}", "-m", f"Release v{next_ver}"])
-        print(f"    [OK] Local files updated and tagged: v{next_ver}")
+        print(f"    [OK] Local files updated, exe compiled, and tagged: v{next_ver}")
     else:
-        print("==> 3. No version bump detected. Ready to push.")
+        print("==> 3. No version bump detected. Compiling executable if requested...")
+        if not args.no_build:
+            build_standalone_exe()
 
     # Push to origin
     print("==> 4. Pushing commits and tags to remote repository...")
