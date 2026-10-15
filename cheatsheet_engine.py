@@ -132,6 +132,14 @@ class CommandItem:
         self.category = category.strip()
         self.original = (original or template).strip()
 
+    @property
+    def label(self) -> str:
+        return self.switch
+
+    @label.setter
+    def label(self, val: str):
+        self.switch = val
+
     def to_dict(self) -> Dict[str, str]:
         d = {
             "switch": self.switch,

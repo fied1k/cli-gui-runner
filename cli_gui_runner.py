@@ -1675,7 +1675,7 @@ class CommandRunnerGUI:
                 self.prereq_btn.config(text="Prerequisites: None")
             return
 
-        cmds = [(c.label, c.template, c.description) for c in profile.commands]
+        cmds = [(getattr(c, "switch", getattr(c, "label", "")), c.template, c.description) for c in profile.commands]
         prereqs = PrerequisiteDetector.check_prerequisites_for_commands(cmds)
         self.current_prerequisites = {p.name: p for p in prereqs}
 
