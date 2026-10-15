@@ -761,6 +761,26 @@ def parse_webpage(html_content, url="", auto_param=True):
 
     Returns: (primary_command, list_of_tuples[(label, cmd, desc)])
     """
+    # Check if this is an OffensiveRamen / comment-driven workflow sheet (e.g. Bettercap)
+    if re.search(r'<section[^>]*class="[^"]*cs-section[^"]*"|<pre[^>]*class="[^"]*cs-sheet[^"]*"', html_content):
+        if " #" in html_content or "\n#" in html_content:
+            try:
+                from cheatsheet_engine import SectionCommentWorkflowParser
+                parser_quick = CheatsheetExtractor()
+                parser_quick.feed(html_content)
+                detected_cmd = detect_primary_command(parser_quick.candidates, url=url, title=parser_quick.page_title)
+                profile = SectionCommentWorkflowParser.parse_html(
+                    html_content,
+                    sheet_id=detected_cmd or "command",
+                    title=parser_quick.page_title or detected_cmd,
+                    caplets_dir="caplets"
+                )
+                if profile.commands:
+                    extracted = [(cmd.switch, cmd.template, cmd.description) for cmd in profile.commands]
+                    return profile.sheet_id or detected_cmd, extracted
+            except Exception:
+                pass
+
     parser = CheatsheetExtractor()
     parser.feed(html_content)
 

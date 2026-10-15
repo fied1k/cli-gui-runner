@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Category & Comment-Driven Parser**: Dedicated parser (`SectionCommentWorkflowParser`) extracting categories, deriving button names from inline comments, and tracking active header prefixes across commands.
+- **Automated Caplet Workflow Generator**: Bundles multi-line sequential attack chains into standalone `.cap` automation scripts in `caplets/` with one-click runner buttons.
+- **JavaScript Proxy Script Extractor**: Extracts HTTP/HTTPS proxy tampering scripts into standalone `caplets/*.js` files.
+- **Top-Bar Global Target Auto-Fill**: Target variables panel (IP/Host, Website/Domain, AP_BSSID/MAC, Interface) auto-filling matching command parameters, falling back to original cheat sheet defaults when left blank.
+- **Automated Standalone Executable Build (`CliGuiRunner.exe`)**: Built via PyInstaller, bundled with default profiles, and saved directly to the local folder root on every release.
+- **Bettercap Cheatsheet Suite**: Comprehensive profile, command reference (`bettercap.txt`), and bundled attack caplets.
+- **GitHub Actions Binary Release Pipeline**: Automated build and upload of `CliGuiRunner.exe` assets to GitHub Releases upon tag creation.
+
 ## [0.6.0] - 2026-10-15
 
 

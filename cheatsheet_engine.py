@@ -114,7 +114,10 @@ KNOWN_EXECUTABLES = {
     "find", "grep", "df", "whois", "dig", "nslookup", "ssh", "scp", "rsync", "netstat", "ss",
     "arp", "route", "ip", "ifconfig", "iwconfig", "airmon-ng", "airodump-ng", "aireplay-ng",
     "aircrack-ng", "hydra", "john", "hashcat", "sqlmap", "nikto", "gobuster", "ffuf", "wfuzz",
-    "sudo", "apt", "apt-get", "systemctl", "service", "gpsd", "xsltproc", "ndiff"
+    "sudo", "apt", "apt-get", "systemctl", "service", "gpsd", "xsltproc", "ndiff",
+    "bettercap", "brew", "go", "net.probe", "net.show", "net.recon", "net.clear", "net.sniff",
+    "arp.spoof", "dns.spoof", "http.proxy", "https.proxy", "wifi.recon", "wifi.show",
+    "wifi.deauth", "wifi.ap", "ble.recon", "ble.show", "ble.enum", "ble.write", "api.rest", "set"
 }
 
 
@@ -122,19 +125,23 @@ KNOWN_EXECUTABLES = {
 # Data Models
 # -----------------------------------------------------------------------------
 class CommandItem:
-    def __init__(self, switch: str, template: str, description: str, category: str = "General"):
+    def __init__(self, switch: str, template: str, description: str, category: str = "General", original: str = ""):
         self.switch = switch.strip()
         self.template = template.strip()
         self.description = description.strip()
         self.category = category.strip()
+        self.original = (original or template).strip()
 
     def to_dict(self) -> Dict[str, str]:
-        return {
+        d = {
             "switch": self.switch,
             "template": self.template,
             "description": self.description,
             "category": self.category
         }
+        if self.original:
+            d["original"] = self.original
+        return d
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]) -> "CommandItem":
@@ -142,7 +149,8 @@ class CommandItem:
             switch=data.get("switch", ""),
             template=data.get("template", ""),
             description=data.get("description", ""),
-            category=data.get("category", "General")
+            category=data.get("category", "General"),
+            original=data.get("original", "")
         )
 
 
@@ -277,13 +285,21 @@ class VariableNormalizer:
         # 8. HTTP Methods
         cmd = re.sub(r'(\s(?:-X|--request)\s+)(?:GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH)\b', r'\1<http_method>', cmd, flags=re.IGNORECASE)
 
-        # 9. Domain names
-        cmd = re.sub(r'\b(?:[a-zA-Z0-9\-]+\.)+(?:com|org|net|edu|gov|mil|io|co|local|lan|internal)\b', '<domain_name>', cmd, flags=re.IGNORECASE)
+        # 9. Domain names and wildcards
+        cmd = re.sub(r'\b\*\.[a-zA-Z0-9\-.]+\b', '<domain_name>', cmd)
+        def _replace_domain(m):
+            val = m.group(0)
+            if any(val.lower().startswith(p) for p in ("arp.", "net.", "dns.", "http.", "https.", "wifi.", "ble.", "api.")):
+                return val
+            return "<domain_name>"
+        cmd = re.sub(r'\b(?:[a-zA-Z0-9\-]+\.)+(?:com|org|net|edu|gov|mil|io|co|local|lan)\b', _replace_domain, cmd, flags=re.IGNORECASE)
 
-        # 10. GPS hardware serial
+        # 10. Uppercase variable names (e.g. AP_BSSID, CLIENT_MAC, TARGET_BSSID, DEVICE_MAC)
+        cmd = re.sub(r'\b(AP_BSSID|TARGET_BSSID|CLIENT_MAC|DEVICE_MAC|BSSID|UUID|DATA)\b', lambda m: f"<{m.group(1).lower()}>", cmd)
+
+        # 11. GPS hardware serial
         cmd = re.sub(r'/dev/tty(?:USB|ACM|AMA)\d+', '<gps_device_path>', cmd)
         cmd = re.sub(r'\bHOST:3501\b', '<remote_host>:3501', cmd)
-        cmd = re.sub(r'\bUUID\b', '<uuid>', cmd)
 
         # Unshield
         for k, v in shielded.items():
@@ -531,6 +547,230 @@ class OffensiveRamenHTMLParser(HTMLParser):
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
         return cls.parse_html(content, sheet_id=sheet_id, title=title)
+
+
+# -----------------------------------------------------------------------------
+# Parser Strategy A.2: Section & Comment-Driven Workflow Parser (e.g. Bettercap)
+# -----------------------------------------------------------------------------
+class SectionCommentWorkflowParser:
+    """Parses hierarchical, comment-driven cheatsheet sections.
+    
+    Extracts:
+    1. Category headers (e.g. INSTALLATION, NETWORK DISCOVERY, ARP SPOOFING (MITM)).
+    2. Button names derived from inline comments (# Kali/Debian -> 'Kali/Debian').
+    3. Active prefix tracking from standalone comments (# Start -> 'Start', 'Start Specific interface').
+    4. Attack workflow bundling: Multi-line sequences under numbered comments (# 1. MITM + credential capture)
+       are compiled into caplet automation files (caplets/MITM_credential_capture.cap) with runner buttons.
+    5. JavaScript proxy scripts: Extracted into caplets/*.js.
+    """
+
+    @staticmethod
+    def sanitize_filename(name: str) -> str:
+        clean = re.sub(r"^\d+\.\s*", "", name.strip())
+        clean = re.sub(r"[^\w\s\-]", "", clean)
+        clean = re.sub(r"[\s\-]+", "_", clean)
+        return clean.strip("_")
+
+    @classmethod
+    def parse_html(
+        cls,
+        html_content: str,
+        sheet_id: str = "bettercap",
+        title: str = "Bettercap",
+        caplets_dir: str = "caplets"
+    ) -> CheatSheetProfile:
+        import html as html_lib
+
+        profile = CheatSheetProfile(
+            sheet_id=sheet_id,
+            title=title,
+            source="OffensiveRamen",
+            default_file=f"{sheet_id}.txt"
+        )
+        os.makedirs(caplets_dir, exist_ok=True)
+
+        sections = re.findall(
+            r'<section[^>]*class="[^"]*cs-section[^"]*"[^>]*>\s*<h2[^>]*>(.*?)</h2>\s*<pre[^>]*>(.*?)</pre>',
+            html_content,
+            re.DOTALL
+        )
+        if not sections:
+            sections = re.findall(
+                r'<h2[^>]*>(.*?)</h2>\s*(?:<div[^>]*>)?\s*<pre[^>]*>(.*?)</pre>',
+                html_content,
+                re.DOTALL
+            )
+
+        for h_raw, c_raw in sections:
+            clean_h = re.sub(r'<[^>]+>', '', h_raw).replace('#', '').strip()
+            c = html_lib.unescape(c_raw).strip()
+
+            if not clean_h or clean_h.upper().startswith(("TIPS", "ON THIS PAGE", "MENU", "TOOLS", "SISTER SITE")):
+                if clean_h.upper().startswith("TIPS"):
+                    for l in c.splitlines():
+                        note = l.strip().lstrip("-*• ").strip()
+                        if note:
+                            profile.reference_notes.append(f"[TIPS] {note}")
+                continue
+
+            # Case 1: Multi-line attack workflows -> Generate .cap scripts
+            if "WORKFLOW" in clean_h.upper():
+                blocks = re.split(r'(?m)^(?=#\s*\d+\.)', c)
+                for block in blocks:
+                    block = block.strip()
+                    if not block:
+                        continue
+                    lines = block.splitlines()
+                    title_line = lines[0].lstrip("#").strip()
+                    cmd_lines = [l.strip() for l in lines[1:] if l.strip() and not l.strip().startswith("#")]
+                    if not cmd_lines:
+                        continue
+
+                    cap_filename = cls.sanitize_filename(title_line) + ".cap"
+                    cap_path = os.path.join(caplets_dir, cap_filename)
+                    with open(cap_path, "w", encoding="utf-8") as f:
+                        f.write("\n".join(cmd_lines) + "\n")
+
+                    btn_name = re.sub(r"^\d+\.\s*", "", title_line).strip()
+                    cap_rel_path = f"caplets/{cap_filename}".replace("\\", "/")
+                    runner_cmd = f"sudo {sheet_id} -caplet {cap_rel_path}"
+                    profile.add_command(CommandItem(
+                        switch=btn_name,
+                        template=runner_cmd,
+                        description=runner_cmd,
+                        category=clean_h,
+                        original=runner_cmd
+                    ))
+                continue
+
+            # Case 2: JavaScript proxy scripts -> Generate .js files
+            if "PROXY SCRIPTS" in clean_h.upper() or "JAVASCRIPT" in clean_h.upper():
+                js_blocks = re.split(r'(?m)^(?=//)', c)
+                for block in js_blocks:
+                    block = block.strip()
+                    if not block:
+                        continue
+                    lines = block.splitlines()
+                    title_line = lines[0].lstrip("/").strip()
+                    js_code = "\n".join(lines[1:])
+                    js_filename = cls.sanitize_filename(title_line) + ".js"
+                    js_path = os.path.join(caplets_dir, js_filename)
+                    with open(js_path, "w", encoding="utf-8") as f:
+                        f.write(js_code.strip() + "\n")
+
+                    js_rel_path = f"caplets/{js_filename}".replace("\\", "/")
+                    runner_cmd = f"set http.proxy.script {js_rel_path}"
+                    profile.add_command(CommandItem(
+                        switch=title_line,
+                        template=runner_cmd,
+                        description=runner_cmd,
+                        category=clean_h,
+                        original=runner_cmd
+                    ))
+                continue
+
+            # Case 3: Regular command & switch sections
+            lines = c.splitlines()
+            active_prefix = None
+            first_after_prefix = False
+
+            for raw_line in lines:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                # Header comment lines
+                if line.startswith("#"):
+                    comment = line.lstrip("#").strip()
+                    if comment and not comment.startswith("==="):
+                        # Detect if informational comment like '# Captures credentials from:'
+                        if comment.endswith(":") or "captures credentials from" in comment.lower():
+                            profile.reference_notes.append(f"[{clean_h}] {comment}")
+                            active_prefix = None
+                        else:
+                            active_prefix = comment
+                            first_after_prefix = True
+                    continue
+
+                # Command line
+                if " #" in line:
+                    cmd_part, inline_comment = line.split(" #", 1)
+                    cmd_str = cmd_part.strip()
+                    inline_desc = inline_comment.strip()
+                    if active_prefix:
+                        btn_name = f"{active_prefix} {inline_desc}"
+                        first_after_prefix = False
+                    else:
+                        btn_name = inline_desc
+                    desc = cmd_str
+                else:
+                    cmd_str = line
+                    if active_prefix and first_after_prefix:
+                        btn_name = active_prefix
+                        first_after_prefix = False
+                    else:
+                        btn_name = cmd_str
+                    desc = cmd_str
+
+                normalized_cmd = VariableNormalizer.normalize(cmd_str)
+                profile.add_command(CommandItem(
+                    switch=btn_name,
+                    template=normalized_cmd,
+                    description=desc,
+                    category=clean_h,
+                    original=cmd_str
+                ))
+
+        return profile
+
+    @staticmethod
+    def resolve_target_variables(
+        cmd: str,
+        target_ip: str = "",
+        target_domain: str = "",
+        target_mac: str = "",
+        target_iface: str = "",
+        original_cmd: str = ""
+    ) -> str:
+        """Substitutes user-supplied target variables, falling back to original defaults when empty."""
+        result = cmd
+
+        # 1. Target IP / Host / Subnet
+        if target_ip:
+            result = re.sub(r"<target_ip>|<victim_ip>|<redirect_ip>|<target>|<ip>|<target_host>", target_ip, result)
+            if "/" in target_ip:
+                result = re.sub(r"<target_subnet>|<subnet_cidr>", target_ip, result)
+        elif original_cmd:
+            # Fallback to original text for IP if available
+            orig_ip_match = re.search(r"\b(?:\d{1,3}\.){3}\d{1,3}(?:/\d{1,2})?\b", original_cmd)
+            if orig_ip_match and orig_ip_match.group(0) != "0.0.0.0":
+                result = re.sub(r"<target_ip>|<victim_ip>|<redirect_ip>|<target>|<target_subnet>|<subnet_cidr>", orig_ip_match.group(0), result)
+
+        # 2. Target Domain / Website
+        if target_domain:
+            result = re.sub(r"<domain_name>|<target_domain>|<domain>|<website>|<url>", target_domain, result)
+        elif original_cmd:
+            orig_dom_match = re.search(r"\b(?:[a-zA-Z0-9\-]+\.)+(?:com|org|net|edu|gov|io|co|local)\b", original_cmd)
+            if orig_dom_match:
+                result = re.sub(r"<domain_name>|<target_domain>|<domain>|<website>|<url>", orig_dom_match.group(0), result)
+
+        # 3. AP_BSSID / MAC
+        if target_mac:
+            result = re.sub(r"<ap_bssid>|<target_bssid>|<client_mac>|<device_mac>|<mac_address>|<bssid>|<mac>", target_mac, result)
+        elif original_cmd:
+            orig_mac_match = re.search(r"\b(AP_BSSID|TARGET_BSSID|CLIENT_MAC|DEVICE_MAC)\b", original_cmd)
+            if orig_mac_match:
+                result = re.sub(r"<ap_bssid>|<target_bssid>|<client_mac>|<device_mac>|<mac_address>", orig_mac_match.group(0), result)
+
+        # 4. Interface
+        if target_iface:
+            result = re.sub(r"<interface>|<iface>|<monitor_interface>", target_iface, result)
+        elif original_cmd:
+            orig_iface_match = re.search(r"\b(eth\d+|wlan\d+mon|wlan\d+)\b", original_cmd)
+            if orig_iface_match:
+                result = re.sub(r"<interface>|<iface>|<monitor_interface>", orig_iface_match.group(0), result)
+
+        return result
 
 
 # -----------------------------------------------------------------------------
