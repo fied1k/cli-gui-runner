@@ -32,6 +32,7 @@ from cheatsheet_engine import (
     FIELD_ROLE_LABELS,
     ROLE_CHOICES,
 )
+from prerequisite_detector import PrerequisiteDetector, ToolPrerequisite
 
 __version__ = "0.8.0"
 
@@ -646,6 +647,7 @@ class CommandRunnerGUI:
         self.profiles = {}
         self.profile_labels = {}
         self.current_profile = None
+        self.current_prerequisites = {}
 
         self._ensure_default_files()
         self._build_ui()
@@ -679,6 +681,9 @@ class CommandRunnerGUI:
         ttk.Button(tb1, text="Export Standalone .py...", command=self.export_standalone_profile).pack(side=tk.LEFT, padx=3)
         ttk.Button(tb1, text="Import Sheet / Web...", command=self.open_smart_importer).pack(side=tk.LEFT, padx=3)
         ttk.Button(tb1, text="Quick Paste...", command=self.open_paste_editor).pack(side=tk.LEFT, padx=3)
+
+        self.prereq_btn = ttk.Button(tb1, text="Prerequisites: Scanning...", command=self.open_prerequisites_dialog)
+        self.prereq_btn.pack(side=tk.LEFT, padx=3)
 
         self.stop_btn = ttk.Button(tb1, text="Stop Running Command", command=self.stop_process, state=tk.DISABLED)
         self.stop_btn.pack(side=tk.RIGHT)
@@ -1660,6 +1665,169 @@ class CommandRunnerGUI:
             # Single category / flat view
             self._build_card_grid(self.btn_container, profile.commands)
 
+        self.refresh_prerequisites(profile)
+
+    def refresh_prerequisites(self, profile=None):
+        if profile is None:
+            profile = getattr(self, "current_profile", None)
+        if not profile or not profile.commands:
+            if hasattr(self, "prereq_btn"):
+                self.prereq_btn.config(text="Prerequisites: None")
+            return
+
+        cmds = [(c.label, c.template, c.description) for c in profile.commands]
+        prereqs = PrerequisiteDetector.check_prerequisites_for_commands(cmds)
+        self.current_prerequisites = {p.name: p for p in prereqs}
+
+        needs_path = [p for p in prereqs if p.status == "NEEDS_PATH"]
+        missing = [p for p in prereqs if p.status in ("MISSING_BOTH", "MISSING_NO_WSL")]
+        wsl_ready = [p for p in prereqs if p.status == "READY_WSL"]
+
+        if not hasattr(self, "prereq_btn"):
+            return
+
+        if needs_path:
+            self.prereq_btn.config(text="Prerequisites: Python needs PATH [Fix]")
+        elif missing:
+            self.prereq_btn.config(text=f"Prerequisites: {len(missing)} Missing [Setup]")
+        elif wsl_ready:
+            self.prereq_btn.config(text=f"Prerequisites: Ready ({len(wsl_ready)} via WSL)")
+        else:
+            self.prereq_btn.config(text=f"Prerequisites: All Ready ({len(prereqs)})")
+
+    def open_prerequisites_dialog(self):
+        if not hasattr(self, "current_prerequisites") or not self.current_prerequisites:
+            if getattr(self, "current_profile", None):
+                self.refresh_prerequisites(self.current_profile)
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Prerequisites & Dependency Health Check")
+        dialog.geometry("740x520")
+        dialog.minsize(660, 420)
+        dialog.transient(self.root)
+
+        is_wsl, wsl_distro = PrerequisiteDetector.check_wsl_status()
+
+        # Header Frame
+        hdr = ttk.Frame(dialog, padding=12)
+        hdr.pack(fill=tk.X)
+
+        profile_title = self.current_profile.title if getattr(self, "current_profile", None) else "Active Cheat Sheet"
+        ttk.Label(hdr, text=f"Prerequisites for: {profile_title}", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+
+        wsl_status_txt = f"WSL Active ({wsl_distro})" if is_wsl else "WSL Not Detected"
+        env_lbl = ttk.Label(hdr, text=f"Platform: Windows  •  {wsl_status_txt}", font=("Segoe UI", 9), foreground="#333333")
+        env_lbl.pack(anchor="w", pady=(2, 0))
+
+        # Main Table / Treeview
+        tbl_frame = ttk.Frame(dialog, padding=(12, 0, 12, 10))
+        tbl_frame.pack(fill=tk.BOTH, expand=True)
+
+        columns = ("tool", "cmds", "win_status", "wsl_status", "execution_mode")
+        tree = ttk.Treeview(tbl_frame, columns=columns, show="headings", height=10)
+        tree.heading("tool", text="Tool / Executable")
+        tree.heading("cmds", text="Used In")
+        tree.heading("win_status", text="Windows Status")
+        tree.heading("wsl_status", text="WSL Status")
+        tree.heading("execution_mode", text="Execution Strategy")
+
+        tree.column("tool", width=120, anchor="w")
+        tree.column("cmds", width=70, anchor="center")
+        tree.column("win_status", width=210, anchor="w")
+        tree.column("wsl_status", width=160, anchor="w")
+        tree.column("execution_mode", width=150, anchor="center")
+
+        scrollbar = ttk.Scrollbar(tbl_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def populate_tree():
+            for item in tree.get_children():
+                tree.delete(item)
+
+            for prereq in sorted(getattr(self, "current_prerequisites", {}).values(), key=lambda x: -x.command_count):
+                cmd_txt = f"{prereq.command_count} cmds" if prereq.command_count > 0 else "System Core"
+
+                # Windows text
+                if prereq.windows_in_path:
+                    win_txt = f"In PATH: {os.path.basename(prereq.windows_path)}"
+                elif prereq.windows_path:
+                    win_txt = "Found on disk (NOT in PATH!)"
+                else:
+                    win_txt = "Not Found"
+
+                # WSL text
+                if prereq.wsl_path:
+                    wsl_txt = f"Installed ({os.path.basename(prereq.wsl_path)})"
+                elif prereq.wsl_available:
+                    wsl_txt = "Available via apt"
+                else:
+                    wsl_txt = "No WSL"
+
+                # Mode
+                if prereq.status == "READY_WINDOWS":
+                    mode_txt = "Native Windows"
+                elif prereq.status == "READY_WSL":
+                    mode_txt = "WSL Interop (Auto)"
+                elif prereq.status == "NEEDS_PATH":
+                    mode_txt = "Action: Add to PATH"
+                else:
+                    mode_txt = "Action: Install Needed"
+
+                tree.insert("", tk.END, values=(prereq.name, cmd_txt, win_txt, wsl_txt, mode_txt))
+
+        populate_tree()
+
+        # Action Button Bar
+        btn_box = ttk.Frame(dialog, padding=12)
+        btn_box.pack(fill=tk.X)
+
+        # Check if Python or any tool needs PATH
+        needs_path_tools = [p for p in getattr(self, "current_prerequisites", {}).values() if p.status == "NEEDS_PATH"]
+
+        def do_add_path():
+            if not needs_path_tools:
+                messagebox.showinfo("PATH Check", "All detected Windows tools are already in PATH!")
+                return
+            target = needs_path_tools[0]
+            target_dir = os.path.dirname(target.windows_path)
+            success = PrerequisiteDetector.add_directory_to_user_path(target_dir)
+            if success:
+                messagebox.showinfo("PATH Updated", f"Successfully added:\n{target_dir}\nto your User PATH environment variable!\n\nProcess environment refreshed.")
+                if getattr(self, "current_profile", None):
+                    self.refresh_prerequisites(self.current_profile)
+                populate_tree()
+            else:
+                messagebox.showerror("PATH Error", f"Failed to update PATH for {target_dir}.")
+
+        if needs_path_tools:
+            ttk.Button(btn_box, text="Add Python to PATH", command=do_add_path).pack(side=tk.LEFT, padx=4)
+
+        # Install missing tools via WSL
+        missing_wsl_tools = [p for p in getattr(self, "current_prerequisites", {}).values() if p.status == "MISSING_BOTH"]
+
+        def do_install_wsl():
+            if not missing_wsl_tools:
+                messagebox.showinfo("WSL Packages", "No missing tools need installation in WSL.")
+                return
+            target = missing_wsl_tools[0]
+            cmd = target.install_cmd_wsl or f"wsl sudo apt install -y {target.name}"
+            self.execute_command(cmd)
+            messagebox.showinfo("WSL Installation Started", f"Launched WSL installation for '{target.name}' in console window.\n\nAfter completion, click 'Re-Scan Prerequisites'.")
+
+        if is_wsl and missing_wsl_tools:
+            ttk.Button(btn_box, text=f"Install {missing_wsl_tools[0].name} in WSL", command=do_install_wsl).pack(side=tk.LEFT, padx=4)
+
+        def do_rescan():
+            if getattr(self, "current_profile", None):
+                self.refresh_prerequisites(self.current_profile)
+            populate_tree()
+            messagebox.showinfo("Scan Complete", "Prerequisites scan updated.")
+
+        ttk.Button(btn_box, text="Re-Scan", command=do_rescan).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_box, text="Close", command=dialog.destroy).pack(side=tk.RIGHT)
+
     def _build_card_grid(self, parent_container, commands):
         canvas = tk.Canvas(parent_container, highlightthickness=0)
         scrollbar = ttk.Scrollbar(parent_container, orient="vertical", command=canvas.yview)
@@ -2022,6 +2190,23 @@ class CommandRunnerGUI:
 
     def execute_command(self, cmd):
         self.output_area.delete("1.0", tk.END)
+
+        # Automatic Prerequisite & WSL Interop Routing
+        exec_mode, resolved_cmd, note = PrerequisiteDetector.resolve_command_execution(
+            cmd, getattr(self, "current_prerequisites", None)
+        )
+        if exec_mode == "wsl":
+            cmd = resolved_cmd
+            self.log_output(f"[{note}]\n")
+        elif exec_mode == "missing":
+            self.log_output(f"[Warning]: {note}\n")
+            if messagebox.askyesno(
+                "Prerequisite Tool Missing",
+                f"{note}.\n\nWould you like to open the Prerequisites Helper to install or configure it?"
+            ):
+                self.open_prerequisites_dialog()
+                return
+
         self.log_output(f"$ {cmd}\n")
 
         # Check if persistent console mode is enabled (default)
