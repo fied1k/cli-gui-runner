@@ -1,0 +1,45 @@
+{
+  "sheet_id": "general",
+  "title": "General Quick Tools",
+  "source": "",
+  "default_file": "commands.txt",
+  "categories": [
+    "Network Diagnostics",
+    "File Utilities",
+    "System Diagnostics",
+    "Web Requests"
+  ],
+  "commands": [
+    {
+      "switch": "Ping Host",
+      "template": "ping -c 4 <IP_or_Hostname>",
+      "description": "Send 4 ICMP echo requests to a target",
+      "category": "Network Diagnostics"
+    },
+    {
+      "switch": "Port Scan (Nmap)",
+      "template": "nmap -sV -p <Port_Range> <Target_IP>",
+      "description": "Scan specific ports and detect versions",
+      "category": "Network Diagnostics"
+    },
+    {
+      "switch": "Find Files",
+      "template": "find <Directory> -name \"*<Search_Term>*\"",
+      "description": "Search for files recursively in directory tree",
+      "category": "File Utilities"
+    },
+    {
+      "switch": "Check Disk Space",
+      "template": "df -h",
+      "description": "Show current disk usage in human-readable format",
+      "category": "System Diagnostics"
+    },
+    {
+      "switch": "Custom cURL",
+      "template": "curl -I -X <HTTP_Method> <URL>",
+      "description": "Fetch HTTP response headers from a URL",
+      "category": "Web Requests"
+    }
+  ],
+  "reference_notes": []
+}

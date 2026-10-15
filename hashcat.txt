@@ -1,0 +1,91 @@
+# Format: Button Name | Command Template | Description (Optional)
+# Scraped from https://offensiveramen.com/cheatsheets/hashcat
+# Command: hashcat
+
+BASIC SYNTAX | hashcat -m <mode> -a <attack> <hashfile> <wordlist/mask> | BASIC SYNTAX
+BASIC SYNTAX | hashcat -m 0 -a 0 hash.txt wordlist.txt | BASIC SYNTAX
+COMMON OPTIONS | -m <mode>         Hash type (see modes below) | COMMON OPTIONS
+COMMON OPTIONS | -a <attack>       Attack mode (0-7) | COMMON OPTIONS
+COMMON OPTIONS | -o <file>         Output file for cracked hashes | COMMON OPTIONS
+COMMON OPTIONS | -r <file>         Rules file | COMMON OPTIONS
+COMMON OPTIONS | -w <level>        Workload profile (1-4) | COMMON OPTIONS
+Show already cracked hashes | hashcat --show <target> | Show already cracked hashes
+Show uncracked hashes | hashcat --left <target> | Show uncracked hashes
+Enable status screen | hashcat --status <target> | Enable status screen
+Ignore warnings | hashcat --force <target> | Ignore warnings
+-O | hashcat -O <target> | Optimized kernels (faster, length limit)
+Custom potfile path | hashcat --potfile-path <target> | Custom potfile path
+Session name for restore | hashcat --session <target> | Session name for restore
+Restore session | hashcat --restore <target> | Restore session
+COMMON OPTIONS | -j <rule>         Single rule for left wordlist | COMMON OPTIONS
+COMMON OPTIONS | -k <rule>         Single rule for right wordlist | COMMON OPTIONS
+ATTACK MODES (-a) | 0 = Dictionary attack (straight) | ATTACK MODES (-a)
+ATTACK MODES (-a) | 1 = Combination attack | ATTACK MODES (-a)
+ATTACK MODES (-a) | 3 = Brute-force/Mask attack | ATTACK MODES (-a)
+ATTACK MODES (-a) | 6 = Dictionary + Mask | ATTACK MODES (-a)
+ATTACK MODES (-a) | 7 = Mask + Dictionary | ATTACK MODES (-a)
+ATTACK MODES (-a) | 9 = Association attack | ATTACK MODES (-a)
+COMMON HASH MODES (-m) | 3200    bcrypt ($2*$) | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 22     Juniper NetScreen/SSG | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 100     SHA1 | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 1000    NTLM | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 5600    NetNTLMv2 | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 5500    NetNTLMv1 | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 1400    SHA256 | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 3200    bcrypt | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 400     phpass (WordPress, Drupal, etc.) | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 2711    vBulletin >= v3.8.5 | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 400     Joomla >= 2.5.18 | COMMON HASH MODES (-m)
+COMMON HASH MODES (-m) | 300     MySQL4.1/MySQL5 | COMMON HASH MODES (-m)
+Network | 2500    WPA/WPA2 | Network
+COMMON HASH MODES (-m) | 22000   WPA-PBKDF2-PMKID+EAPOL | COMMON HASH MODES (-m)
+Kerberos | 13100   Kerberos 5 TGS-REP (etype 23) | Kerberos
+COMMON HASH MODES (-m) | 22911   RSA/DSA/EC/OpenSSH Private Keys | COMMON HASH MODES (-m)
+MASK ATTACK (-a 3) | characters (!@#$%^&*...) | MASK ATTACK (-a 3)
+Examples | hashcat -m 0 -a 3 hash.txt ?l?l?l?l?l?l | Examples
+Ullllldd | hashcat -m 0 -a 3 hash.txt ?u?l?l?l?l?l?d?d | Ullllldd
+6 digits | hashcat -m 0 -a 3 hash.txt ?d?d?d?d?d?d | 6 digits
+password + 3 digits | hashcat -m 0 -a 3 hash.txt password?d?d?d | password + 3 digits
+8 any chars | hashcat -m 0 -a 3 hash.txt ?a?a?a?a?a?a?a?a | 8 any chars
+Custom charset | hashcat -m 0 -a 3 hash.txt -1 ?l?d ?1?1?1?1?1 | Custom charset
+custom sets | hashcat -m 0 -a 3 hash.txt -1 abc -2 123 ?1?1?2?2 | custom sets
+Increment mode | hashcat -m 0 -a 3 hash.txt ?a?a?a?a?a?a --increment --increment-min=4 | Increment mode
+DICTIONARY ATTACK (-a 0) | hashcat -m 0 -a 0 hash.txt wordlist.txt -r rules/best64.rule | DICTIONARY ATTACK (-a 0)
+DICTIONARY ATTACK (-a 0) | hashcat -m 0 -a 0 hash.txt wordlist1.txt wordlist2.txt | DICTIONARY ATTACK (-a 0)
+COMBINATION ATTACK (-a 1) | hashcat -m 0 -a 1 hash.txt wordlist1.txt wordlist2.txt | COMBINATION ATTACK (-a 1)
+Dictionary + Mask | hashcat -m 0 -a 6 hash.txt wordlist.txt ?d?d?d?d | Dictionary + Mask
+Mask + Dictionary | hashcat -m 0 -a 7 hash.txt ?d?d?d?d wordlist.txt | Mask + Dictionary
+RULES | last character | RULES
+RULES | hashcat -m 0 -a 0 hash.txt wordlist.txt -r rule1.rule -r rule2.rule | RULES
+WORKLOAD PROFILES (-w) | 1 = Low (desktop usage during crack) | WORKLOAD PROFILES (-w)
+WORKLOAD PROFILES (-w) | 2 = Default | WORKLOAD PROFILES (-w)
+WORKLOAD PROFILES (-w) | 3 = High | WORKLOAD PROFILES (-w)
+WORKLOAD PROFILES (-w) | 4 = Nightmare (may freeze system) | WORKLOAD PROFILES (-w)
+MD5 dictionary attack | hashcat -m 0 -a 0 md5.txt <File_Path> | MD5 dictionary attack
+NTLM with rules | hashcat -m 1000 -a 0 ntlm.txt rockyou.txt -r rules/best64.rule | NTLM with rules
+WPA2 cracking | hashcat -m 22000 capture.hc22000 rockyou.txt | WPA2 cracking
+SHA256 brute force 8 chars | hashcat -m 1400 -a 3 sha256.txt ?a?a?a?a?a?a?a?a | SHA256 brute force 8 chars
+Kerberos TGS cracking | hashcat -m 13100 -a 0 kerberos.txt wordlist.txt | Kerberos TGS cracking
+bcrypt slow but possible | hashcat -m 3200 -a 0 bcrypt.txt wordlist.txt -w 3 | bcrypt slow but possible
+NetNTLMv2 | hashcat -m 5600 -a 0 netntlmv2.txt rockyou.txt | NetNTLMv2
+Show cracked passwords | hashcat -m 0 hash.txt --show | Show cracked passwords
+Restore session | hashcat --session=mysession -m 0 -a 0 hash.txt wordlist.txt | Restore session
+PRACTICAL EXAMPLES | hashcat --restore --session=mysession | PRACTICAL EXAMPLES
+Use optimized kernels | hashcat -O ... | Use optimized kernels (faster but limited length)
+Adjust workload | hashcat -w 3 ... | Adjust workload
+Use GPU-specific tuning | hashcat --force --opencl-device-types 1,2 | Use GPU-specific tuning
+Check benchmark | hashcat -b -m 0 | Check benchmark
+Monitor temperature | hashcat --hwmon-temp-abort=90 | Monitor temperature
+Save to file | hashcat -m 0 -a 0 hash.txt wordlist.txt -o cracked.txt | Save to file
+Output format | hashcat -m 0 -a 0 hash.txt wordlist.txt -o cracked.txt --outfile-format=2 | Output format
+From /etc/shadow | cat <File_Path> | grep -v '!' | grep -v '*' > hashes.txt | From /etc/shadow
+HASH EXTRACTION | hashcat --example-hashes | grep -A2 "MODE:" | HASH EXTRACTION
+If GPU not detected | hashcat -I | If GPU not detected
+Force operation | hashcat --force | Force operation
+TROUBLESHOOTING | hashcat --opencl-device-types 1,2 | TROUBLESHOOTING
+If running out of memory | hashcat -n 1 | If running out of memory
+Use optimized kernels | hashcat -O | Use optimized kernels
+Session management | hashcat --session=name | Session management
+Resume session | hashcat --restore | Resume session
+Skip first N words | hashcat -s 1000000 | Skip first N words
+Process only N words | hashcat -l 1000000 | Process only N words

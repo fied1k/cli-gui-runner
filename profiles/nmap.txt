@@ -1,0 +1,52 @@
+# Profile: Nmap Network Scanner
+# Source: https://offensiveramen.com/cheatsheets/nmap
+# Format: Switch / Button Name | Command Template | Description
+
+
+# === Basic Scans ===
+nmap (top 1000) | nmap <target> | Basic TCP port scan probing the top 1,000 most common ports
+-sn | nmap -sn <target> | Host discovery ping scan without port scanning
+-Pn | nmap -Pn <target> | Skip host discovery ping probes; treat all targets as online
+
+# === Port Specifications ===
+-p- | nmap -p- <target> | Scan all 65,535 TCP ports
+-p <Port> | nmap -p <port> <target> | Scan specific port numbers or ranges (e.g. 22,80,443)
+-F | nmap -F <target> | Fast scan probing the top 100 most common ports
+
+# === Scan Techniques ===
+-sS | nmap -sS <target> | TCP SYN stealth scan (half-open, default with root)
+-sT | nmap -sT <target> | TCP connect scan (full three-way handshake, no root needed)
+-sU | nmap -sU <target> | UDP port scan for open UDP services (DNS, SNMP, DHCP)
+-sA | nmap -sA <target> | TCP ACK scan to map firewall rulesets and filtered ports
+-sW | nmap -sW <target> | TCP Window scan to determine open vs filtered ports
+
+# === Service & OS Detection ===
+-sV | nmap -sV <target> | Probe open ports to determine service name and version info
+-sV (Aggressive) | nmap -sV --version-intensity 5 <target> | Aggressive service version detection probing deeper
+-O | nmap -O <target> | Remote operating system detection via TCP/IP fingerprinting
+-A | nmap -A <target> | Aggressive scan (OS detection, version scan, script scanning, traceroute)
+
+# === Timing & Performance ===
+-T0 (Paranoid) | nmap -T0 <target> | Paranoid timing for serial IDS evasion
+-T2 (Polite) | nmap -T2 <target> | Polite timing consuming less target bandwidth
+-T4 (Aggressive) | nmap -T4 <target> | Aggressive timing for faster scans on reliable networks
+-T5 (Insane) | nmap -T5 <target> | Extremely fast timing for high-speed networks
+
+# === NSE Script Engine ===
+--script=default | nmap -sC <target> | Run default safe NSE scripts
+--script=vuln | nmap --script=vuln <target> | Check target for known CVE vulnerabilities
+--script=auth | nmap --script=auth <target> | Run authentication and credential checks
+--script=discovery | nmap --script=discovery <target> | Run network discovery and directory enumeration scripts
+--script=safe | nmap --script=safe <target> | Run safe non-intrusive scripts
+
+# === Output & Formats ===
+-oN | nmap -oN <output_file> <target> | Save scan results in normal human-readable format
+-oX | nmap -oX <output_xml> <target> | Save scan results in XML format
+-oG | nmap -oG <output_gnmap> <target> | Save scan results in grepable format
+-oA | nmap -oA <output_prefix> <target> | Save scan results in all three major formats (Nmap, XML, Grepable)
+
+# === Firewall & IDS Evasion ===
+-f (Fragment) | nmap -f <target> | Fragment packets to evade simple packet filters
+-D (Decoys) | nmap -D RND:5 <target> | Cloak scan using 5 random decoy IP addresses
+-S (Spoof) | nmap -S <spoofed_ip> <target> | Spoof source IP address
+-g (Port 53) | nmap -g 53 <target> | Use source port 53 (DNS) for outbound probes

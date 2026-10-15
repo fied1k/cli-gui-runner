@@ -64,6 +64,52 @@ class TestCommandParsing(unittest.TestCase):
         self.assertEqual(entries[0][1], "df -h")
         self.assertEqual(entries[0][2], "Check current disk space")
 
+    def test_categorized_txt_loading(self):
+        sample_txt = (
+            "# Profile: Kismet Wireless\n"
+            "# === Starting Kismet ===\n"
+            "Console UI | kismet | Start Kismet console\n"
+            "# === Capture Sources ===\n"
+            "-c (WiFi) | kismet -c <interface> | Capture on WiFi\n"
+            "# === REFERENCE & TIPS ===\n"
+            "# • Web UI: http://localhost:2501\n"
+        )
+        test_path = os.path.join(os.path.dirname(__file__), "temp_sample.txt")
+        try:
+            with open(test_path, "w", encoding="utf-8") as f:
+                f.write(sample_txt)
+            self.app.profiles = {}
+            self.app.profile_labels = {}
+            self.app.file_label = type("MockLabel", (), {"config": lambda *a, **k: None})()
+            self.app.render_profile = lambda prof: None
+
+            self.app.load_commands(test_path)
+            self.assertIn("temp_sample", self.app.profiles)
+            prof = self.app.profiles["temp_sample"]
+            self.assertEqual(len(prof.commands), 2)
+            self.assertIn("Starting Kismet", prof.categories)
+            self.assertIn("Capture Sources", prof.categories)
+            self.assertEqual(len(prof.reference_notes), 1)
+            self.assertIn("Web UI: http://localhost:2501", prof.reference_notes[0])
+        finally:
+            if os.path.exists(test_path):
+                os.remove(test_path)
+
+    def test_verification_dialog_swap_logic(self):
+        from cheatsheet_engine import CheatSheetProfile, CommandItem
+        prof = CheatSheetProfile(sheet_id="test", title="Test")
+        prof.add_command(CommandItem(switch="nmap -sS", template="Stealth Scan", description="TCP SYN Scan"))
+        # In this inverted case:
+        self.assertEqual(prof.commands[0].switch, "nmap -sS")
+        self.assertEqual(prof.commands[0].template, "Stealth Scan")
+
+        # Swap columns
+        for cmd in prof.commands:
+            cmd.switch, cmd.template = cmd.template, cmd.switch
+
+        self.assertEqual(prof.commands[0].switch, "Stealth Scan")
+        self.assertEqual(prof.commands[0].template, "nmap -sS")
+
 
 if __name__ == "__main__":
     unittest.main()

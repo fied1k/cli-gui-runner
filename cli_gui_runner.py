@@ -1,6 +1,7 @@
 import os
 import re
 import ssl
+import json
 import subprocess
 import threading
 import urllib.request
@@ -9,6 +10,16 @@ from html.parser import HTMLParser
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from tkinter.scrolledtext import ScrolledText
+
+from cheatsheet_engine import (
+    CommandItem,
+    CheatSheetProfile,
+    VariableNormalizer,
+    OffensiveRamenHTMLParser,
+    TabularColumnMapper,
+    KeyValueBlockParser,
+    StandaloneGenerator,
+)
 
 __version__ = "0.4.0"
 
@@ -294,18 +305,125 @@ class WebCommandExtractor(HTMLParser):
             })
 
 
+class ParserVerificationDialog(tk.Toplevel):
+    """
+    Interactive confirmation modal for parsed cheat sheets.
+    Displays extracted categories, buttons (switch), templates (example), and descriptions.
+    Asks the user if the parsing is correct and allows swapping columns or editing.
+    """
+    def __init__(self, parent, profile: CheatSheetProfile, confidence: float = 1.0, on_confirm=None):
+        super().__init__(parent)
+        self.profile = profile
+        self.confidence = confidence
+        self.on_confirm = on_confirm
+        self.title(f"Verify Parsed Cheat Sheet: {profile.title}")
+        self.geometry("920x580")
+        self.minsize(720, 420)
+        self.transient(parent)
+        self.grab_set()
+
+        banner = ttk.Frame(self, padding=12)
+        banner.pack(fill=tk.X)
+
+        conf_pct = int(self.confidence * 100)
+        conf_color = "#107c10" if conf_pct >= 90 else ("#d83b01" if conf_pct < 70 else "#0078d4")
+
+        ttk.Label(
+            banner,
+            text=f"Are these parsed values correct for '{profile.title}'?",
+            font=("Segoe UI", 12, "bold")
+        ).pack(anchor="w")
+
+        info_text = (
+            f"Detected {len(profile.commands)} command(s) across {len(profile.categories)} category/categories "
+            f"with {conf_pct}% confidence."
+        )
+        if profile.reference_notes:
+            info_text += f" ({len(profile.reference_notes)} reference/tip notes detected)"
+
+        ttk.Label(banner, text=info_text, font=("Segoe UI", 9, "bold"), foreground=conf_color).pack(anchor="w", pady=(2, 4))
+        ttk.Label(
+            banner,
+            text="Verify that the Switch (Button Text), Example (Command Template), and Description columns are accurately mapped.",
+            font=("Segoe UI", 9),
+            foreground="#555555"
+        ).pack(anchor="w")
+
+        # Table
+        tbl_frame = ttk.Frame(self, padding=(12, 0, 12, 10))
+        tbl_frame.pack(fill=tk.BOTH, expand=True)
+
+        cols = ("cat", "switch", "template", "desc")
+        self.tree = ttk.Treeview(tbl_frame, columns=cols, show="headings", selectmode="browse")
+        self.tree.heading("cat", text="Category")
+        self.tree.heading("switch", text="Switch (Button Text)")
+        self.tree.heading("template", text="Example (Command Template)")
+        self.tree.heading("desc", text="Description")
+
+        self.tree.column("cat", width=140, anchor="w")
+        self.tree.column("switch", width=150, anchor="w")
+        self.tree.column("template", width=280, anchor="w")
+        self.tree.column("desc", width=310, anchor="w")
+
+        vsb = ttk.Scrollbar(tbl_frame, orient="vertical", command=self.tree.yview)
+        hsb = ttk.Scrollbar(tbl_frame, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
+        tbl_frame.columnconfigure(0, weight=1)
+        tbl_frame.rowconfigure(0, weight=1)
+
+        self._refresh_tree()
+
+        # Action bar
+        btn_bar = ttk.Frame(self, padding=12)
+        btn_bar.pack(fill=tk.X)
+
+        ttk.Button(btn_bar, text="Swap Switch & Example Columns", command=self.swap_columns).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(btn_bar, text="Confirm & Import Cheat Sheet", command=self.confirm).pack(side=tk.RIGHT, padx=6)
+        ttk.Button(btn_bar, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+    def _refresh_tree(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        for cmd in self.profile.commands:
+            self.tree.insert("", tk.END, values=(cmd.category, cmd.switch, cmd.template, cmd.description))
+
+    def swap_columns(self):
+        for cmd in self.profile.commands:
+            cmd.switch, cmd.template = cmd.template, cmd.switch
+        self._refresh_tree()
+
+    def confirm(self):
+        if self.on_confirm:
+            self.on_confirm(self.profile)
+        self.destroy()
+
+
 class CommandRunnerGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("CLI Quick-Reference GUI Runner")
-        self.root.geometry("1040x660")
+        self.root.title("CLI Quick-Reference & Multi-Cheat Sheet Runner")
+        self.root.geometry("1080x700")
         self.current_process = None
         self.current_file = DEFAULT_COMMANDS_FILE
         self.auto_param_var = tk.BooleanVar(value=True)
 
+        self.profiles = {}
+        self.profile_labels = {}
+        self.current_profile = None
+
         self._ensure_default_files()
         self._build_ui()
-        self.load_commands(self.current_file)
+        self._load_all_profiles()
+        if "kismet" in self.profiles:
+            self.switch_profile("kismet")
+        elif "general" in self.profiles:
+            self.switch_profile("general")
+        else:
+            self.load_commands(self.current_file)
 
     def _ensure_default_files(self):
         if not os.path.exists(DEFAULT_COMMANDS_FILE):
@@ -317,49 +435,50 @@ class CommandRunnerGUI:
                 f.write(SAMPLE_PASTE_FILE.strip() + "\n")
 
     def _build_ui(self):
-        # Top Toolbar
-        toolbar = ttk.Frame(self.root, padding=8)
-        toolbar.pack(fill=tk.X)
+        # Top Toolbar Row 1: Profile Selector & Core Actions
+        tb1 = ttk.Frame(self.root, padding=(8, 6, 8, 2))
+        tb1.pack(fill=tk.X)
 
-        ttk.Button(toolbar, text="Open Cheat Sheet...", command=self.browse_file).pack(side=tk.LEFT, padx=(0, 4))
-        ttk.Button(toolbar, text="Reload File", command=lambda: self.load_commands(self.current_file)).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Import PasteCommands.txt", command=self.import_paste_commands).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Quick Paste Editor...", command=self.open_paste_editor).pack(side=tk.LEFT, padx=4)
-        ttk.Button(toolbar, text="Import from Webpage...", command=self.open_webpage_importer).pack(side=tk.LEFT, padx=4)
+        ttk.Label(tb1, text="Cheat Sheet Profile:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+        self.profile_combo = ttk.Combobox(tb1, state="readonly", width=34)
+        self.profile_combo.pack(side=tk.LEFT, padx=(0, 8))
+        self.profile_combo.bind("<<ComboboxSelected>>", self.on_profile_dropdown_change)
+
+        ttk.Button(tb1, text="Export Standalone .py...", command=self.export_standalone_profile).pack(side=tk.LEFT, padx=3)
+        ttk.Button(tb1, text="Import Sheet / Web...", command=self.open_smart_importer).pack(side=tk.LEFT, padx=3)
+        ttk.Button(tb1, text="Quick Paste...", command=self.open_paste_editor).pack(side=tk.LEFT, padx=3)
+
+        self.stop_btn = ttk.Button(tb1, text="Stop Running Command", command=self.stop_process, state=tk.DISABLED)
+        self.stop_btn.pack(side=tk.RIGHT)
+
+        # Top Toolbar Row 2: File management & parameters
+        tb2 = ttk.Frame(self.root, padding=(8, 2, 8, 6))
+        tb2.pack(fill=tk.X)
+
+        ttk.Button(tb2, text="Open File...", command=self.browse_file).pack(side=tk.LEFT, padx=(0, 4))
+        ttk.Button(tb2, text="Reload Active", command=self.reload_active).pack(side=tk.LEFT, padx=4)
+        ttk.Button(tb2, text="Import PasteCommands.txt", command=self.import_paste_commands).pack(side=tk.LEFT, padx=4)
 
         ttk.Checkbutton(
-            toolbar,
+            tb2,
             text="Auto-detect <Variables>",
             variable=self.auto_param_var
         ).pack(side=tk.LEFT, padx=8)
 
-        self.file_label = ttk.Label(toolbar, text=f"Loaded: {self.current_file}", foreground="gray")
+        self.file_label = ttk.Label(tb2, text="", foreground="#555555")
         self.file_label.pack(side=tk.LEFT, padx=6)
 
-        self.stop_btn = ttk.Button(toolbar, text="Stop Running Command", command=self.stop_process, state=tk.DISABLED)
-        self.stop_btn.pack(side=tk.RIGHT)
-
-        # Main Split Pane (Buttons on top, Terminal output on bottom)
+        # Main Split Pane (Buttons / Category tabs on top, Live Terminal on bottom)
         paned = ttk.PanedWindow(self.root, orient=tk.VERTICAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
-        # Scrollable Button Grid Frame
-        btn_container = ttk.LabelFrame(paned, text="Available Commands (Click to Configure & Run)", padding=5)
-        paned.add(btn_container, weight=1)
+        # Button Container for Categories or flat grid
+        self.btn_container = ttk.LabelFrame(paned, text="Available Commands (Click to Configure & Run)", padding=4)
+        paned.add(self.btn_container, weight=3)
 
-        self.canvas = tk.Canvas(btn_container, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(btn_container, orient="vertical", command=self.canvas.yview)
+        # Backward compatibility placeholders
+        self.canvas = tk.Canvas(self.btn_container, highlightthickness=0)
         self.button_frame = ttk.Frame(self.canvas)
-
-        self.button_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
-        self.canvas.create_window((0, 0), window=self.button_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=scrollbar.set)
-
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Terminal Output Frame
         term_container = ttk.LabelFrame(paned, text="Live Execution Output", padding=5)
@@ -1137,11 +1256,9 @@ class CommandRunnerGUI:
     def browse_file(self):
         filepath = filedialog.askopenfilename(
             title="Select Command Reference File",
-            filetypes=[("Text Files", "*.txt *.md *.conf"), ("All Files", "*.*")]
+            filetypes=[("All Supported", "*.json *.txt *.md *.conf"), ("JSON Profiles", "*.json"), ("Text Files", "*.txt *.md *.conf"), ("All Files", "*.*")]
         )
         if filepath:
-            self.current_file = filepath
-            self.file_label.config(text=f"Loaded: {os.path.basename(filepath)}")
             self.load_commands(filepath)
 
     def parse_line(self, line):
@@ -1156,37 +1273,147 @@ class CommandRunnerGUI:
             desc = cmd_template
         return label, cmd_template, desc
 
-    def load_commands(self, filepath):
-        for widget in self.button_frame.winfo_children():
+    def _load_all_profiles(self):
+        profiles_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
+        if not os.path.exists(profiles_dir):
+            os.makedirs(profiles_dir, exist_ok=True)
+
+        self.profiles.clear()
+        self.profile_labels.clear()
+
+        for fname in sorted(os.listdir(profiles_dir)):
+            if fname.endswith(".json"):
+                fpath = os.path.join(profiles_dir, fname)
+                try:
+                    prof = CheatSheetProfile.load_json(fpath)
+                    self.profiles[prof.sheet_id] = prof
+                    label = f"{prof.title} ({len(prof.commands)} cmds)"
+                    self.profile_labels[label] = prof.sheet_id
+                except Exception as e:
+                    print(f"Error loading profile {fpath}: {e}")
+
+        # If general profile is not in profiles, build it from DEFAULT_COMMANDS_FILE
+        if "general" not in self.profiles and os.path.exists(DEFAULT_COMMANDS_FILE):
+            try:
+                gen_prof = CheatSheetProfile(sheet_id="general", title="General Quick Tools", default_file=DEFAULT_COMMANDS_FILE)
+                with open(DEFAULT_COMMANDS_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        l = line.strip()
+                        if l and not l.startswith("#"):
+                            sw, tm, ds = self.parse_line(l)
+                            gen_prof.add_command(CommandItem(sw, tm, ds, "Quick Tools"))
+                self.profiles["general"] = gen_prof
+                label = f"{gen_prof.title} ({len(gen_prof.commands)} cmds)"
+                self.profile_labels[label] = "general"
+            except Exception:
+                pass
+
+        if hasattr(self, "profile_combo"):
+            self.profile_combo['values'] = list(self.profile_labels.keys())
+
+    def on_profile_dropdown_change(self, event=None):
+        selected_label = self.profile_combo.get()
+        sheet_id = self.profile_labels.get(selected_label)
+        if sheet_id and sheet_id in self.profiles:
+            self.switch_profile(sheet_id)
+
+    def switch_profile(self, sheet_id: str):
+        if sheet_id not in self.profiles:
+            return
+        profile = self.profiles[sheet_id]
+        self.current_profile = profile
+        self.current_file = profile.default_file or f"profiles/{sheet_id}.json"
+
+        # Update combobox selection
+        for lbl, sid in self.profile_labels.items():
+            if sid == sheet_id:
+                self.profile_combo.set(lbl)
+                break
+
+        self.file_label.config(text=f"Active Profile: {profile.title}")
+        self.root.title(f"{profile.title} — CLI Quick-Reference & Multi-Cheat Sheet Runner")
+        self.render_profile(profile)
+
+    def reload_active(self):
+        if self.current_profile:
+            self.switch_profile(self.current_profile.sheet_id)
+        else:
+            self.load_commands(self.current_file)
+
+    def render_profile(self, profile: CheatSheetProfile):
+        for widget in self.btn_container.winfo_children():
             widget.destroy()
 
-        if not os.path.exists(filepath):
-            messagebox.showerror("Error", f"File not found: {filepath}")
-            return
+        # If profile has multiple categories or reference notes, use categorized ttk.Notebook
+        if len(profile.categories) > 1 or profile.reference_notes:
+            notebook = ttk.Notebook(self.btn_container)
+            notebook.pack(fill=tk.BOTH, expand=True)
 
-        with open(filepath, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+            # Tab for each category
+            for cat in profile.categories:
+                cat_cmds = [c for c in profile.commands if c.category == cat]
+                tab_frame = ttk.Frame(notebook, padding=4)
+                notebook.add(tab_frame, text=f"{cat} ({len(cat_cmds)})")
+                self._build_card_grid(tab_frame, cat_cmds)
+
+            # All Commands tab
+            all_tab = ttk.Frame(notebook, padding=4)
+            notebook.add(all_tab, text=f"All Commands ({len(profile.commands)})")
+            self._build_card_grid(all_tab, profile.commands)
+
+            # Tips & Reference Notes tab if available
+            if profile.reference_notes:
+                ref_tab = ttk.Frame(notebook, padding=6)
+                notebook.add(ref_tab, text=f"Reference & Tips ({len(profile.reference_notes)})")
+
+                ref_text = ScrolledText(ref_tab, font=("Consolas", 9), bg="#fdfdfd", fg="#222222", wrap=tk.WORD)
+                ref_text.pack(fill=tk.BOTH, expand=True)
+                ref_text.insert(tk.END, f"# Reference Notes, Authentication & Setup Details for {profile.title}\n\n")
+                for note in profile.reference_notes:
+                    ref_text.insert(tk.END, f"• {note}\n")
+                ref_text.config(state=tk.DISABLED)
+
+        else:
+            # Single category / flat view
+            self._build_card_grid(self.btn_container, profile.commands)
+
+    def _build_card_grid(self, parent_container, commands):
+        canvas = tk.Canvas(parent_container, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent_container, orient="vertical", command=canvas.yview)
+        grid_frame = ttk.Frame(canvas)
+
+        grid_frame.bind(
+            "<Configure>",
+            lambda e, c=canvas: c.configure(scrollregion=c.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=grid_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _on_mousewheel(event, c=canvas):
+            c.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
         row, col = 0, 0
         max_cols = 3
 
-        for line in lines:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-
-            label, cmd_template, desc = self.parse_line(line)
-
-            card = ttk.Frame(self.button_frame, padding=6, relief="groove")
-            card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
+        for cmd in commands:
+            card = ttk.Frame(grid_frame, padding=6, relief="groove")
+            card.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
 
             btn = ttk.Button(
-                card, text=label,
-                command=lambda c=cmd_template, l=label: self.on_command_click(l, c)
+                card,
+                text=cmd.switch,
+                command=lambda ci=cmd: self.on_command_click(ci.switch, ci.template)
             )
-            btn.pack(fill=tk.X, pady=(0, 3))
+            btn.pack(fill=tk.X, pady=(0, 2))
 
-            desc_lbl = ttk.Label(card, text=desc, font=("Segoe UI", 8), foreground="#555555", wraplength=250)
+            cmd_lbl = ttk.Label(card, text=cmd.template, font=("Consolas", 8), foreground="#005fb8", wraplength=260)
+            cmd_lbl.pack(anchor="w", pady=(0, 2))
+
+            desc_lbl = ttk.Label(card, text=cmd.description, font=("Segoe UI", 8), foreground="#444444", wraplength=260)
             desc_lbl.pack(anchor="w")
 
             col += 1
@@ -1195,7 +1422,208 @@ class CommandRunnerGUI:
                 row += 1
 
         for c in range(max_cols):
-            self.button_frame.columnconfigure(c, weight=1)
+            grid_frame.columnconfigure(c, weight=1)
+
+    def export_standalone_profile(self):
+        if not self.current_profile:
+            messagebox.showwarning("No Active Profile", "Please select a cheat sheet profile to export.")
+            return
+
+        default_name = f"{self.current_profile.sheet_id}_runner.py"
+        filepath = filedialog.asksaveasfilename(
+            title=f"Export Standalone Runner: {self.current_profile.title}",
+            defaultextension=".py",
+            initialfile=default_name,
+            filetypes=[("Python Script", "*.py"), ("All Files", "*.*")]
+        )
+        if not filepath:
+            return
+
+        code = StandaloneGenerator.generate_python_code(self.current_profile)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        messagebox.showinfo(
+            "Export Successful",
+            f"Successfully exported standalone runner for '{self.current_profile.title}' to:\n\n{filepath}\n\n"
+            "This script can be executed independently with zero dependencies (pure Python + Tkinter)!"
+        )
+
+    def open_smart_importer(self):
+        win = tk.Toplevel(self.root)
+        win.title("Import Cheat Sheet (Webpage, HTML, Markdown, or Raw Text)")
+        win.geometry("780x560")
+        win.transient(self.root)
+        win.grab_set()
+
+        ttk.Label(
+            win,
+            text="Import heterogeneous cheat sheets. The engine detects categories, switches, templates, and descriptions:",
+            wraplength=740
+        ).pack(anchor="w", padx=12, pady=(10, 4))
+
+        notebook = ttk.Notebook(win, padding=8)
+        notebook.pack(fill=tk.BOTH, expand=True)
+
+        # Tab 1: Webpage URL
+        url_tab = ttk.Frame(notebook, padding=10)
+        notebook.add(url_tab, text="Fetch from URL")
+
+        ttk.Label(url_tab, text="Enter Cheat Sheet Webpage URL (e.g. https://offensiveramen.com/cheatsheets/kismet):").pack(anchor="w", pady=(0, 4))
+        url_var = tk.StringVar(value="https://offensiveramen.com/cheatsheets/")
+        url_entry = ttk.Entry(url_tab, textvariable=url_var, font=("Consolas", 10), width=65)
+        url_entry.pack(fill=tk.X, pady=(0, 10))
+
+        # Tab 2: Raw Text / Markdown / TSV / Key-Value
+        text_tab = ttk.Frame(notebook, padding=10)
+        notebook.add(text_tab, text="Paste Raw Text / Markdown / Table")
+
+        raw_box = ScrolledText(text_tab, font=("Consolas", 9), height=14)
+        raw_box.pack(fill=tk.BOTH, expand=True)
+
+        status_var = tk.StringVar(value="Ready to parse.")
+        status_lbl = ttk.Label(win, textvariable=status_var, foreground="#0078d4", wraplength=740)
+        status_lbl.pack(anchor="w", padx=12, pady=4)
+
+        def parse_and_verify():
+            current_tab = notebook.index(notebook.select())
+            profile = None
+            confidence = 0.85
+
+            if current_tab == 0:
+                url = url_var.get().strip()
+                if not url or (url.startswith("https://offensiveramen.com/cheatsheets/") and len(url) <= 39):
+                    messagebox.showwarning("Missing URL", "Please enter a specific cheat sheet URL.", parent=win)
+                    return
+
+                status_var.set(f"Fetching {url}...")
+                win.update_idletasks()
+                try:
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 CLI-GUI-Runner/1.0"})
+                    with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                        charset = resp.headers.get_content_charset() or "utf-8"
+                        html_text = resp.read().decode(charset, errors="replace")
+
+                    sheet_name = url.rstrip("/").split("/")[-1].replace("-", " ").replace("_", " ").title()
+                    sheet_id = url.rstrip("/").split("/")[-1].lower()
+
+                    if "cs-sheet" in html_text or "cs-h" in html_text or "<pre" in html_text:
+                        profile = OffensiveRamenHTMLParser.parse_html(html_text, sheet_id=sheet_id, title=sheet_name)
+                        confidence = 0.95
+                    else:
+                        entries = self.extract_commands_from_html(html_text)
+                        profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name, source=url)
+                        for lbl, cmd, dsc in entries:
+                            profile.add_command(CommandItem(lbl, cmd, dsc, "General"))
+                        confidence = 0.85
+                except Exception as e:
+                    messagebox.showerror("Fetch Error", f"Failed to fetch webpage:\n{e}", parent=win)
+                    status_var.set("Fetch failed.")
+                    return
+            else:
+                raw_text = raw_box.get("1.0", tk.END).strip()
+                if not raw_text:
+                    messagebox.showwarning("Empty Content", "Please paste cheat sheet content first.", parent=win)
+                    return
+
+                sheet_id = "custom_sheet"
+                sheet_name = "Custom Cheat Sheet"
+                lines = raw_text.splitlines()
+
+                if any("switch:" in l.lower() and "example:" in l.lower() for l in lines):
+                    items = KeyValueBlockParser.parse(raw_text)
+                    profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name)
+                    for it in items:
+                        profile.add_command(it)
+                    confidence = 0.92
+                elif any("\t" in l or "|" in l for l in lines):
+                    items, conf = TabularColumnMapper.parse_rows(lines)
+                    profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name)
+                    for it in items:
+                        profile.add_command(it)
+                    confidence = conf
+                else:
+                    entries = self.format_raw_paste_text(raw_text)
+                    profile = CheatSheetProfile(sheet_id=sheet_id, title=sheet_name)
+                    for lbl, cmd, dsc in entries:
+                        profile.add_command(CommandItem(lbl, cmd, dsc, "General"))
+                    confidence = 0.80
+
+            if not profile or not profile.commands:
+                messagebox.showinfo("No Commands Found", "No valid CLI commands could be identified in the provided source.", parent=win)
+                status_var.set("No commands identified.")
+                return
+
+            def on_confirmed(verified_profile: CheatSheetProfile):
+                prof_path = os.path.join("profiles", f"{verified_profile.sheet_id}.json")
+                verified_profile.save_json(prof_path)
+                verified_profile.default_file = prof_path
+                self._load_all_profiles()
+                self.switch_profile(verified_profile.sheet_id)
+                win.destroy()
+                messagebox.showinfo("Import Successful", f"Imported '{verified_profile.title}' with {len(verified_profile.commands)} command(s)!")
+
+            ParserVerificationDialog(win, profile, confidence=confidence, on_confirm=on_confirmed)
+
+        btn_bar = ttk.Frame(win, padding=10)
+        btn_bar.pack(fill=tk.X)
+        ttk.Button(btn_bar, text="Analyze & Verify Parsing...", command=parse_and_verify).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_bar, text="Cancel", command=win.destroy).pack(side=tk.RIGHT)
+
+    def load_commands(self, filepath):
+        if not os.path.exists(filepath):
+            messagebox.showerror("Error", f"File not found: {filepath}")
+            return
+
+        self.current_file = filepath
+
+        if filepath.endswith(".json"):
+            try:
+                prof = CheatSheetProfile.load_json(filepath)
+                self.profiles[prof.sheet_id] = prof
+                self.switch_profile(prof.sheet_id)
+                return
+            except Exception as e:
+                print(f"Error parsing json profile {filepath}: {e}")
+
+        # Parse .txt file, grouping by # === Category === if present
+        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+
+        sheet_id = os.path.splitext(os.path.basename(filepath))[0].lower()
+        title = sheet_id.replace("_", " ").replace("-", " ").title()
+        profile = CheatSheetProfile(sheet_id=sheet_id, title=title, default_file=filepath)
+
+        curr_category = "General"
+        for line in lines:
+            s_line = line.strip()
+            if not s_line:
+                continue
+
+            if s_line.startswith("# ===") and s_line.endswith("==="):
+                curr_category = s_line.replace("# ===", "").replace("===", "").strip()
+                continue
+            elif s_line.startswith("# •") or s_line.startswith("# -"):
+                profile.reference_notes.append(s_line.lstrip("# •-").strip())
+                continue
+            elif s_line.startswith("#"):
+                continue
+
+            label, cmd_template, desc = self.parse_line(s_line)
+            profile.add_command(CommandItem(label, cmd_template, desc, curr_category))
+
+        self.profiles[sheet_id] = profile
+        lbl = f"{profile.title} ({len(profile.commands)} cmds)"
+        self.profile_labels[lbl] = sheet_id
+        if hasattr(self, "profile_combo"):
+            self.profile_combo['values'] = list(self.profile_labels.keys())
+            self.profile_combo.set(lbl)
+        self.current_profile = profile
+        self.file_label.config(text=f"Loaded: {os.path.basename(filepath)}")
+        self.render_profile(profile)
 
     def on_command_click(self, label, cmd_template):
         variables = list(dict.fromkeys(re.findall(r"[<\{]([^>\}\s]+)[>\}]", cmd_template)))
@@ -1207,25 +1635,40 @@ class CommandRunnerGUI:
 
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Configure: {label}")
-        dialog.geometry("460x340")
+        dialog.geometry("540x360")
+        dialog.minsize(480, 260)
         dialog.transient(self.root)
         dialog.grab_set()
 
-        ttk.Label(dialog, text="Template:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
-        ttk.Label(dialog, text=cmd_template, font=("Consolas", 9), foreground="#005fb8", wraplength=430).pack(anchor="w", padx=12, pady=(0, 10))
+        ttk.Label(dialog, text="Command Template:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
+        ttk.Label(dialog, text=cmd_template, font=("Consolas", 9), foreground="#005fb8", wraplength=510).pack(anchor="w", padx=12, pady=(2, 8))
 
         form_frame = ttk.Frame(dialog, padding=12)
         form_frame.pack(fill=tk.BOTH, expand=True)
 
         entries = {}
         for idx, var_name in enumerate(variables):
-            clean_label = var_name.replace("_", " ")
-            ttk.Label(form_frame, text=f"{clean_label}:").grid(row=idx, column=0, sticky="w", pady=5, padx=(0, 10))
-            entry = ttk.Entry(form_frame, width=35)
+            clean_label = var_name.replace("_", " ").title()
+            ttk.Label(form_frame, text=f"{clean_label}:").grid(row=idx, column=0, sticky="w", pady=5, padx=(0, 8))
+            entry = ttk.Entry(form_frame, width=32)
             entry.grid(row=idx, column=1, sticky="ew", pady=5)
             entries[var_name] = entry
             if idx == 0:
                 entry.focus_set()
+
+            var_lower = var_name.lower()
+            if any(k in var_lower for k in ("file", "db", "pcap", "kml", "csv", "log", "cap", "script", "wordlist", "cert", "key")):
+                def make_file_browse(e=entry):
+                    return lambda: (
+                        lambda path: (e.delete(0, tk.END), e.insert(0, path)) if path else None
+                    )(filedialog.askopenfilename(parent=dialog))
+                ttk.Button(form_frame, text="Browse File...", width=12, command=make_file_browse(entry)).grid(row=idx, column=2, padx=(6, 0))
+            elif any(k in var_lower for k in ("dir", "folder", "path")):
+                def make_dir_browse(e=entry):
+                    return lambda: (
+                        lambda path: (e.delete(0, tk.END), e.insert(0, path)) if path else None
+                    )(filedialog.askdirectory(parent=dialog))
+                ttk.Button(form_frame, text="Browse Dir...", width=12, command=make_dir_browse(entry)).grid(row=idx, column=2, padx=(6, 0))
 
         form_frame.columnconfigure(1, weight=1)
 

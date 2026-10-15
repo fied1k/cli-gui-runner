@@ -36,19 +36,30 @@ An intuitive, lightweight desktop GUI application that transforms static CLI che
 
 ## Key Features
 
-- **Interactive Command Grid**: Automatically renders buttons for each command parsed from cheat sheet text files (`commands.txt`, `.md`, `.conf`).
-- **Dynamic Parameter Extraction**: Automatically detects placeholders formatted as `<variable>`, `{variable}`, or `[variable]` and presents a clean modal form to enter parameter values before execution.
-- **Direct Execution**: Commands without variables prompt for quick execution confirmation without unnecessary dialogues.
+- **Multi-Cheat Sheet Architecture & Dynamic Dropdown Switcher**:
+  - Switch effortlessly between preloaded and custom cheat sheets via the toolbar dropdown:
+    - **Kismet Wireless Suite** (Starting Kismet, Capture Sources, Source Options, Wardrive Mode, REST API, Logging, Installation)
+    - **Nmap Security Scanner** (Target Specs, Techniques, Service/OS, Timing, Scripts, Output, Evasion)
+    - **Wireshark & TShark** (Live capture, display filters, ring-buffers, interfaces)
+    - **General Quick Tools** & custom profiles
+- **Intelligent Categorized Layout & Reference Drawer**:
+  - Automatically categorizes commands into intuitive notebook tabs with responsive 3-column cards.
+  - Every button shows **Switch (Button Name)**, **Example (Command Template)**, and a **Detailed Description**.
+  - Non-executable reference notes (e.g. default credentials, Web UI endpoints, capture device hardware parameters) are automatically organized into an expandable **Tips & Reference Notes** drawer.
+- **Interactive Parser Verification Modal ("Are these parsed values correct?")**:
+  - When importing heterogeneous cheat sheets (OffensiveRamen HTML, Markdown tables, TSV, key-value blocks), an interactive verification dialog presents extracted categories, buttons, and descriptions.
+  - Allows swapping column mappings (e.g. Switch vs Example) before confirming import.
+- **One-Click Standalone Python Generator**:
+  - Export any cheat sheet profile as a standalone, single-file runnable Python Tkinter application (e.g. `kismet_runner.py`) with zero external dependencies.
+- **Dynamic Parameter Extraction & Smart File Pickers**:
+  - Automatically detects `<variable>`, `{variable}`, or `[variable]` placeholders.
+  - Features intelligent file and folder pickers: automatically provides `Browse File...` or `Browse Dir...` buttons for database, pcap, log, kml, wordlist, and path parameters!
 - **Real-Time Live Terminal**: Embedded dark-mode terminal showing real-time streaming `stdout` and `stderr` directly from subprocesses.
 - **Process Management**: Safely terminate long-running, hanging, or background commands anytime using the **Stop Running Command** button.
-- **Smart Paste Importer**: Ingest unstructured command tables or raw snippets into clean cheat sheet entries:
-  - Tab-Separated Tables (TSV copied from docs or websites)
-  - Pipe-delimited records (`Label | Command | Description`)
-  - Colon or hyphen formats (`Label: Command` or `Label - Command`)
-  - Preceding and inline comments (`# Comment \n Command` or `Command # Note`)
-  - Automatic prompt stripping (`$ `, `> `)
-- **Built-in Quick Paste Editor**: An in-app scratchpad for quickly editing, testing, and formatting raw command snippets directly into your cheat sheet.
-- **Zero Heavy Dependencies**: Built exclusively on Python's built-in `tkinter`, `subprocess`, and standard library modules.
+- **Smart Paste & Web Importer**:
+  - Scrapes sectioned documentation (e.g. OffensiveRamen sheets) or parses unstructured clipboard snippets.
+  - Auto-normalizes hardcoded IPs, subnets, MACs, ports, channels, and URLs into clean `<placeholders>`.
+- **Zero External Dependencies**: 100% standard Python library (`tkinter`, `subprocess`, `urllib`, `json`).
 
 ---
 

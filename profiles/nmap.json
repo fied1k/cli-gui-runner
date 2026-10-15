@@ -1,0 +1,211 @@
+{
+  "sheet_id": "nmap",
+  "title": "Nmap Network Scanner",
+  "source": "https://offensiveramen.com/cheatsheets/nmap",
+  "default_file": "profiles/nmap.txt",
+  "categories": [
+    "Basic Scans",
+    "Port Specifications",
+    "Scan Techniques",
+    "Service & OS Detection",
+    "Timing & Performance",
+    "NSE Script Engine",
+    "Output & Formats",
+    "Firewall & IDS Evasion"
+  ],
+  "commands": [
+    {
+      "switch": "nmap (top 1000)",
+      "template": "nmap <target>",
+      "description": "Basic TCP port scan probing the top 1,000 most common ports",
+      "category": "Basic Scans"
+    },
+    {
+      "switch": "-sn",
+      "template": "nmap -sn <target>",
+      "description": "Host discovery ping scan without port scanning",
+      "category": "Basic Scans"
+    },
+    {
+      "switch": "-Pn",
+      "template": "nmap -Pn <target>",
+      "description": "Skip host discovery ping probes; treat all targets as online",
+      "category": "Basic Scans"
+    },
+    {
+      "switch": "-p-",
+      "template": "nmap -p- <target>",
+      "description": "Scan all 65,535 TCP ports",
+      "category": "Port Specifications"
+    },
+    {
+      "switch": "-p <Port>",
+      "template": "nmap -p <port> <target>",
+      "description": "Scan specific port numbers or ranges (e.g. 22,80,443)",
+      "category": "Port Specifications"
+    },
+    {
+      "switch": "-F",
+      "template": "nmap -F <target>",
+      "description": "Fast scan probing the top 100 most common ports",
+      "category": "Port Specifications"
+    },
+    {
+      "switch": "-sS",
+      "template": "nmap -sS <target>",
+      "description": "TCP SYN stealth scan (half-open, default with root)",
+      "category": "Scan Techniques"
+    },
+    {
+      "switch": "-sT",
+      "template": "nmap -sT <target>",
+      "description": "TCP connect scan (full three-way handshake, no root needed)",
+      "category": "Scan Techniques"
+    },
+    {
+      "switch": "-sU",
+      "template": "nmap -sU <target>",
+      "description": "UDP port scan for open UDP services (DNS, SNMP, DHCP)",
+      "category": "Scan Techniques"
+    },
+    {
+      "switch": "-sA",
+      "template": "nmap -sA <target>",
+      "description": "TCP ACK scan to map firewall rulesets and filtered ports",
+      "category": "Scan Techniques"
+    },
+    {
+      "switch": "-sW",
+      "template": "nmap -sW <target>",
+      "description": "TCP Window scan to determine open vs filtered ports",
+      "category": "Scan Techniques"
+    },
+    {
+      "switch": "-sV",
+      "template": "nmap -sV <target>",
+      "description": "Probe open ports to determine service name and version info",
+      "category": "Service & OS Detection"
+    },
+    {
+      "switch": "-sV (Aggressive)",
+      "template": "nmap -sV --version-intensity 5 <target>",
+      "description": "Aggressive service version detection probing deeper",
+      "category": "Service & OS Detection"
+    },
+    {
+      "switch": "-O",
+      "template": "nmap -O <target>",
+      "description": "Remote operating system detection via TCP/IP fingerprinting",
+      "category": "Service & OS Detection"
+    },
+    {
+      "switch": "-A",
+      "template": "nmap -A <target>",
+      "description": "Aggressive scan (OS detection, version scan, script scanning, traceroute)",
+      "category": "Service & OS Detection"
+    },
+    {
+      "switch": "-T0 (Paranoid)",
+      "template": "nmap -T0 <target>",
+      "description": "Paranoid timing for serial IDS evasion",
+      "category": "Timing & Performance"
+    },
+    {
+      "switch": "-T2 (Polite)",
+      "template": "nmap -T2 <target>",
+      "description": "Polite timing consuming less target bandwidth",
+      "category": "Timing & Performance"
+    },
+    {
+      "switch": "-T4 (Aggressive)",
+      "template": "nmap -T4 <target>",
+      "description": "Aggressive timing for faster scans on reliable networks",
+      "category": "Timing & Performance"
+    },
+    {
+      "switch": "-T5 (Insane)",
+      "template": "nmap -T5 <target>",
+      "description": "Extremely fast timing for high-speed networks",
+      "category": "Timing & Performance"
+    },
+    {
+      "switch": "--script=default",
+      "template": "nmap -sC <target>",
+      "description": "Run default safe NSE scripts",
+      "category": "NSE Script Engine"
+    },
+    {
+      "switch": "--script=vuln",
+      "template": "nmap --script=vuln <target>",
+      "description": "Check target for known CVE vulnerabilities",
+      "category": "NSE Script Engine"
+    },
+    {
+      "switch": "--script=auth",
+      "template": "nmap --script=auth <target>",
+      "description": "Run authentication and credential checks",
+      "category": "NSE Script Engine"
+    },
+    {
+      "switch": "--script=discovery",
+      "template": "nmap --script=discovery <target>",
+      "description": "Run network discovery and directory enumeration scripts",
+      "category": "NSE Script Engine"
+    },
+    {
+      "switch": "--script=safe",
+      "template": "nmap --script=safe <target>",
+      "description": "Run safe non-intrusive scripts",
+      "category": "NSE Script Engine"
+    },
+    {
+      "switch": "-oN",
+      "template": "nmap -oN <output_file> <target>",
+      "description": "Save scan results in normal human-readable format",
+      "category": "Output & Formats"
+    },
+    {
+      "switch": "-oX",
+      "template": "nmap -oX <output_xml> <target>",
+      "description": "Save scan results in XML format",
+      "category": "Output & Formats"
+    },
+    {
+      "switch": "-oG",
+      "template": "nmap -oG <output_gnmap> <target>",
+      "description": "Save scan results in grepable format",
+      "category": "Output & Formats"
+    },
+    {
+      "switch": "-oA",
+      "template": "nmap -oA <output_prefix> <target>",
+      "description": "Save scan results in all three major formats (Nmap, XML, Grepable)",
+      "category": "Output & Formats"
+    },
+    {
+      "switch": "-f (Fragment)",
+      "template": "nmap -f <target>",
+      "description": "Fragment packets to evade simple packet filters",
+      "category": "Firewall & IDS Evasion"
+    },
+    {
+      "switch": "-D (Decoys)",
+      "template": "nmap -D RND:5 <target>",
+      "description": "Cloak scan using 5 random decoy IP addresses",
+      "category": "Firewall & IDS Evasion"
+    },
+    {
+      "switch": "-S (Spoof)",
+      "template": "nmap -S <spoofed_ip> <target>",
+      "description": "Spoof source IP address",
+      "category": "Firewall & IDS Evasion"
+    },
+    {
+      "switch": "-g (Port 53)",
+      "template": "nmap -g 53 <target>",
+      "description": "Use source port 53 (DNS) for outbound probes",
+      "category": "Firewall & IDS Evasion"
+    }
+  ],
+  "reference_notes": []
+}

@@ -1,0 +1,91 @@
+# Profile: Kismet Wireless
+# Source: https://offensiveramen.com/cheatsheets/kismet
+# Format: Switch / Button Name | Command Template | Description
+
+
+# === Installation ===
+apt install | sudo apt install kismet | Kali/Debian
+usermod +kismet | sudo usermod -aG kismet $USER | Add user to kismet group (avoids running as root)
+
+# === Starting Kismet ===
+kismet | kismet | Start with auto-detected source
+-c (Specify WiFi source) | kismet -c <interface> | Specify WiFi source
+-c (Channels) | kismet -c <interface>:name=<source_name>,hop=true,channels="<channels>" | Specify source with options
+-c (Multiple sources) | kismet -c <interface> -c <interface> | Multiple sources
+--daemonize | kismet --daemonize | Start as daemon
+
+# === Capture Sources ===
+-c (WiFi) | kismet -c <interface> | WiFi
+-c (Monitor mode) | kismet -c <monitor_interface> | Monitor mode
+-c (Bluetooth) | kismet -c <hci_interface>:type=linuxbluetooth | Bluetooth
+-c (RTL433 SDR) | kismet -c <sdr_device>:type=rtl433 | RTL-SDR (Software Defined Radio)
+-c (ADS-B) | kismet -c <sdr_device>:type=rtladsb | ADS-B aircraft
+Remote Sensor | kismet_cap_linux_wifi --connect <remote_host>:3501 --source <interface> | Remote capture (distributed)
+
+# === Source Options ===
+-c (Hop: ON) | kismet -c <interface>:hop=true | Channel hopping
+-c (Lock Chan) | kismet -c <interface>:hop=false,channel=<channel> | Lock to channel 6
+-c (Channels) | kismet -c <interface>:channels="<channels>" | Specific channels
+-c (Hop Rate) | kismet -c <interface>:hoprate=<hops_per_sec> | Hops per second
+-c (Band: 2.4GHz) | kismet -c <interface>:band=2.4GHz | Band selection
+-c (Band: 5GHz) | kismet -c <interface>:band=5GHz | Stop capture automatically after receiving count packets
+
+# === Rest Api ===
+API: status.json | curl http://<host>:2501/system/status.json  -H "KISMET: admin:password" | Get system status
+API: List devices | curl http://<host>:2501/devices/all_devices.json  -H "KISMET: admin:password" | List devices
+API: devices.json | curl -X POST http://<host>:2501/devices/summary/devices.json  -H "KISMET: admin:password"  -d '{"fields":["kismet.device.base.name","kismet.device.base.macaddr"]}' | Filter devices
+API: devices.json | curl http://<host>:2501/devices/by-mac/<mac_address>/devices.json  -H "KISMET: admin:password" | Get specific device
+API: <output_pcap> | curl http://<host>:2501/datasource/by-uuid/<uuid>/pcap/<output_pcap>  -H "KISMET: admin:password" -o <output_pcap> | Download PCAP
+
+# === Logging ===
+DB -> PCAP | kismetdb_to_pcap --in <kismet_db> --out <output_pcap> | Convert to other formats
+DB -> WIGLECSV | kismetdb_to_wiglecsv --in <kismet_db> --out <output_csv> | Convert .kismet database log to WiGLE.net upload CSV format
+DB -> KML | kismetdb_to_kml --in <kismet_db> --out <output_kml> | Export captured geolocation coordinates to Google Earth KML map
+--log-types | kismet -c <interface> --log-types pcapng,kismet | Log types
+--log-prefix | kismet -c <interface> --log-prefix mylog | Custom prefix
+
+# === Wardrive Mode ===
+Wardrive Mode | kismet -c <interface> --override wardrive | Combine with GPS for wardriving
+gpsd | gpsd | GPS sources
+GPS (Serial) | kismet -c <interface> --gps serial:<gps_device_path> | Serial GPS
+GPS (gpsd) | kismet -c <interface> --gps gpsd:host=localhost,port=2947 | Stop capture automatically after receiving count packets
+DB -> WIGLECSV | kismetdb_to_wiglecsv --in <kismet_db> --out <output_csv> | Upload results to WiGLE.net
+
+# === REFERENCE & TIPS ===
+# • [🌶 Kismet] Wireless network detector, sniffer, and IDS. Supports WiFi,
+# • [🌶 Kismet] Bluetooth, SDR, and other wireless protocols.
+# • [Web Ui Features] Live device count, packet rates, alerts
+# • [Web Ui Features] GPS mapping (if GPS connected)
+# • [Web Ui Features] Channel activity graph
+# • [Web Ui Features] All discovered wireless devices
+# • [Web Ui Features] Filter by type (AP, client, bridged, etc.)
+# • [Web Ui Features] Sort by signal strength, packets, time
+# • [Web Ui Features] Click device for details
+# • [Web Ui Features] BSSID, ESSID, encryption type
+# • [Web Ui Features] Channel, frequency, signal strength
+# • [Web Ui Features] Connected clients
+# • [Web Ui Features] Packet counts and data rates
+# • [Web Ui Features] Manufacturer (OUI lookup)
+# • [Web Ui Features] GPS location (if available)
+# • [Web Ui Features] Rogue AP detection
+# • [Web Ui Features] Deauth flood detection
+# • [Web Ui Features] BSSID spoofing
+# • [Web Ui Features] Channel hopping anomalies
+# • [Detection / Ids] New/unknown APs on network
+# • [Detection / Ids] Deauthentication floods
+# • [Detection / Ids] BSSID spoofing / evil twin APs
+# • [Detection / Ids] Probe request tracking
+# • [Detection / Ids] Channel hopping anomalies
+# • [Detection / Ids] Unusual client behavior
+# • [Detection / Ids] WPS attacks
+# • [Detection / Ids] KARMA attacks
+# • [Tips] Web UI at port 2501 is the primary interface
+# • [Tips] Add user to kismet group to avoid running as root
+# • [Tips] .kismet files are SQLite — query with standard SQL tools
+# • [Tips] Use multiple WiFi adapters for better coverage
+# • [Tips] Channel locking is better for targeted capture
+# • [Tips] GPS integration enables wardrive mapping
+# • [Tips] REST API allows integration with custom tools
+# • [Tips] Supports remote capture for distributed sensing
+# • [Tips] Kismet can detect rogue APs and evil twins
+# • [Tips] Export to PCAP for detailed analysis in Wireshark

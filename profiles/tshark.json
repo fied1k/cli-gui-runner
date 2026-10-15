@@ -1,0 +1,50 @@
+{
+  "sheet_id": "tshark",
+  "title": "Wireshark & TShark",
+  "source": "",
+  "default_file": "profiles/tshark.txt",
+  "categories": [
+    "Capture Operations",
+    "File IO & Conversion",
+    "Filtering & Analysis"
+  ],
+  "commands": [
+    {
+      "switch": "-D (List Ifaces)",
+      "template": "tshark -D",
+      "description": "List all available network capture interfaces with index numbers",
+      "category": "Capture Operations"
+    },
+    {
+      "switch": "-i <interface>",
+      "template": "tshark -i <interface>",
+      "description": "Capture and stream live traffic to stdout from specified interface",
+      "category": "Capture Operations"
+    },
+    {
+      "switch": "-c <packets>",
+      "template": "tshark -i <interface> -c <packet_count>",
+      "description": "Stop capture automatically after receiving specified packet count",
+      "category": "Capture Operations"
+    },
+    {
+      "switch": "-w <file>",
+      "template": "tshark -i <interface> -w <output_pcap>",
+      "description": "Save raw packet data directly to pcap file for later analysis",
+      "category": "File IO & Conversion"
+    },
+    {
+      "switch": "-r <file>",
+      "template": "tshark -r <input_pcap>",
+      "description": "Read and analyze existing packet capture file",
+      "category": "File IO & Conversion"
+    },
+    {
+      "switch": "-Y (Filter)",
+      "template": "tshark -r <input_pcap> -Y \"<display_filter>\"",
+      "description": "Filter packet analysis using standard Wireshark display filter syntax",
+      "category": "Filtering & Analysis"
+    }
+  ],
+  "reference_notes": []
+}

@@ -1,0 +1,16 @@
+# Profile: Wireshark & TShark
+
+# Format: Switch / Button Name | Command Template | Description
+
+
+# === Capture Operations ===
+-D (List Ifaces) | tshark -D | List all available network capture interfaces with index numbers
+-i <interface> | tshark -i <interface> | Capture and stream live traffic to stdout from specified interface
+-c <packets> | tshark -i <interface> -c <packet_count> | Stop capture automatically after receiving specified packet count
+
+# === File IO & Conversion ===
+-w <file> | tshark -i <interface> -w <output_pcap> | Save raw packet data directly to pcap file for later analysis
+-r <file> | tshark -r <input_pcap> | Read and analyze existing packet capture file
+
+# === Filtering & Analysis ===
+-Y (Filter) | tshark -r <input_pcap> -Y "<display_filter>" | Filter packet analysis using standard Wireshark display filter syntax

