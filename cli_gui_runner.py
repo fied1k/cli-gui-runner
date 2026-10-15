@@ -1667,7 +1667,7 @@ class CommandRunnerGUI:
 
         self.refresh_prerequisites(profile)
 
-    def refresh_prerequisites(self, profile=None):
+    def refresh_prerequisites(self, profile=None, on_complete=None):
         if profile is None:
             profile = getattr(self, "current_profile", None)
         if not profile or not profile.commands:
@@ -1675,25 +1675,39 @@ class CommandRunnerGUI:
                 self.prereq_btn.config(text="Prerequisites: None")
             return
 
+        if hasattr(self, "prereq_btn"):
+            self.prereq_btn.config(text="Prerequisites: Checking...")
+
         cmds = [(getattr(c, "switch", getattr(c, "label", "")), c.template, c.description) for c in profile.commands]
-        prereqs = PrerequisiteDetector.check_prerequisites_for_commands(cmds)
-        self.current_prerequisites = {p.name: p for p in prereqs}
 
-        needs_path = [p for p in prereqs if p.status == "NEEDS_PATH"]
-        missing = [p for p in prereqs if p.status in ("MISSING_BOTH", "MISSING_NO_WSL")]
-        wsl_ready = [p for p in prereqs if p.status == "READY_WSL"]
+        def _bg_scan():
+            prereqs = PrerequisiteDetector.check_prerequisites_for_commands(cmds)
 
-        if not hasattr(self, "prereq_btn"):
-            return
+            def _apply():
+                self.current_prerequisites = {p.name: p for p in prereqs}
+                needs_path = [p for p in prereqs if p.status == "NEEDS_PATH"]
+                missing = [p for p in prereqs if p.status in ("MISSING_BOTH", "MISSING_NO_WSL")]
+                wsl_ready = [p for p in prereqs if p.status == "READY_WSL"]
 
-        if needs_path:
-            self.prereq_btn.config(text="Prerequisites: Python needs PATH [Fix]")
-        elif missing:
-            self.prereq_btn.config(text=f"Prerequisites: {len(missing)} Missing [Setup]")
-        elif wsl_ready:
-            self.prereq_btn.config(text=f"Prerequisites: Ready ({len(wsl_ready)} via WSL)")
-        else:
-            self.prereq_btn.config(text=f"Prerequisites: All Ready ({len(prereqs)})")
+                if hasattr(self, "prereq_btn"):
+                    if needs_path:
+                        self.prereq_btn.config(text="Prerequisites: Python needs PATH [Fix]")
+                    elif missing:
+                        self.prereq_btn.config(text=f"Prerequisites: {len(missing)} Missing [Setup]")
+                    elif wsl_ready:
+                        self.prereq_btn.config(text=f"Prerequisites: Ready ({len(wsl_ready)} via WSL)")
+                    else:
+                        self.prereq_btn.config(text=f"Prerequisites: All Ready ({len(prereqs)})")
+
+                if on_complete:
+                    on_complete()
+
+            try:
+                self.root.after(0, _apply)
+            except Exception:
+                pass
+
+        threading.Thread(target=_bg_scan, daemon=True).start()
 
     def open_prerequisites_dialog(self):
         if not hasattr(self, "current_prerequisites") or not self.current_prerequisites:
@@ -1821,9 +1835,12 @@ class CommandRunnerGUI:
 
         def do_rescan():
             if getattr(self, "current_profile", None):
-                self.refresh_prerequisites(self.current_profile)
-            populate_tree()
-            messagebox.showinfo("Scan Complete", "Prerequisites scan updated.")
+                self.refresh_prerequisites(
+                    self.current_profile,
+                    on_complete=lambda: (populate_tree(), messagebox.showinfo("Scan Complete", "Prerequisites scan updated."))
+                )
+            else:
+                populate_tree()
 
         ttk.Button(btn_box, text="Re-Scan", command=do_rescan).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_box, text="Close", command=dialog.destroy).pack(side=tk.RIGHT)
